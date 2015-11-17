@@ -1,0 +1,36 @@
+{
+    "server" : {
+        "gates" : [
+            {
+                "name" : "gate-server-1",
+                "host" : "127.0.0.1",
+                "port" : 5000
+            }
+        ],
+        "connectors" : [
+            {
+                "name" : "connector-server-1",
+                "host" : "127.0.0.1",
+                "port" : 5001,
+                "callback_host" : "127.0.0.1",
+                "callback_port" : 5101
+            },
+            {
+                "name" : "connector-server-2",
+                "host" : "127.0.0.1",
+                "port" : 5002,
+                "callback_host" : "127.0.0.1",
+                "callback_port" : 5102
+            }
+        ],
+        "backends" : [
+            {
+                "name" : "backend-server-1"
+            },
+            {
+                "name" : "backend-server-2"
+            }
+        ]
+
+    }
+}

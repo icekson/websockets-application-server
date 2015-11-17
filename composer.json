@@ -1,0 +1,17 @@
+{
+    "require": {
+        "react/react": "^0.4.2",
+        "videlalvaro/php-amqplib": "^2.6",
+        "cboden/ratchet": "^0.3.3",
+        "symfony/process": "^2.7",
+        "symfony/console": "^2.7",
+        "hassankhan/config": "^0.8.2",
+        "monolog/monolog": "^1.17",
+        "react/zmq": "^0.3.0"
+    },
+    "autoload" : {
+        "psr-4" : {
+            "Icekson\\" : "src\\Icekson"
+        }
+    }
+}
