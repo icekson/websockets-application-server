@@ -12,6 +12,7 @@ use Icekson\WsAppServer\Config\ApplicationConfig;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
 use React\EventLoop\LibEventLoop;
+use Icekson\Utils\Logger;
 
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Icekson\WsAppServer\Exception\ServiceException;
@@ -108,7 +109,7 @@ class Application implements \SplObserver, ConfigAwareInterface
         if(empty($serviceConfig)){
             throw new ServiceException("Service with name '$name' is not found");
         }
-        $service = $this->initService(new ServiceConfig(array_merge($serviceConfig, $this->getConfiguration()->get("amqp", []))));
+        $service = $this->initService(new ServiceConfig(array_merge($serviceConfig, ["amqp" => $this->getConfiguration()->get("amqp", [])])));
         $service->start();
 
     }

@@ -15,7 +15,7 @@ use Noodlehaus\FileParser\Json;
 use Noodlehaus\FileParser\Php;
 use Noodlehaus\FileParser\Yaml;
 
-class ConfigAdapter implements ConfigureInterface
+class ConfigAdapter extends \Threaded implements ConfigureInterface
 {
     /**
      * @var \ArrayObject
@@ -78,6 +78,8 @@ class ConfigAdapter implements ConfigureInterface
     {
         $this->conf = new \ArrayObject($data);
     }
+
+
 
 
 }

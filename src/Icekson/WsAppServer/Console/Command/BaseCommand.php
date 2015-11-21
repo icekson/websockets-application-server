@@ -9,12 +9,11 @@ namespace Icekson\WsAppServer\Console\Command;
 
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
-use Icekson\WsAppServer\Logger;
 use Noodlehaus\ConfigInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
-
+use Icekson\Utils\Logger;
 
 class BaseCommand extends Command implements ConfigAwareInterface
 {

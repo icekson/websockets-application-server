@@ -6,9 +6,12 @@
 
 namespace Icekson\WsAppServer\Service;
 
+use Icekson\Utils\Logger;
 use Icekson\WsAppServer\Config\ServiceConfig;
+use Icekson\WsAppServer\Service\Support\PubSubListenerInterface;
+use Messaging\Websocket\Handler;
 
-class ConnectorService extends AbstractService
+class ConnectorService extends AbstractService implements PubSubListenerInterface
 {
 
     public function __construct(ServiceConfig $config)
@@ -18,14 +21,29 @@ class ConnectorService extends AbstractService
 
     public function getRunCmd()
     {
-        return "php scripts/runner.php app:service --type=connector --name='$this->getName()'";
+        return "php scripts/runner.php app:service --type=connector --name='{$this->getName()}'";
     }
 
     public function run()
     {
-        while($this->isRun()){
-            $this->logger->debug("connector say hello...");
-            sleep(4);
-        }
+        $loop = \React\EventLoop\Factory::create();
+        $handler = new Handler($this->getConfiguration()->getName(), $this->getConfiguration());
+
+        $webSock = new \React\Socket\Server($loop);
+        $webSock->listen($this->getConfiguration()->getPort(), '0.0.0.0');
+        $webServer = new \Ratchet\Server\IoServer(
+            new \Ratchet\Http\HttpServer(
+                new \Ratchet\WebSocket\WsServer(
+                    $handler
+                )
+            ),
+            $webSock
+        );
+        $loop->run();
+    }
+
+    public function onPubSubMessage($msg)
+    {
+        $this->getLogger()->debug("onPubSubMessage: " . $msg);
     }
 }

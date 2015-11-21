@@ -19,17 +19,16 @@ class GateService extends AbstractService
 
     public function getRunCmd()
     {
-        return "php scripts/runner.php app:service --type=gate --name='$this->getName()'";
+        return "php scripts/runner.php app:service --type=gate --name='{$this->getName()}'";
     }
 
 
     public function run()
     {
-
         while($this->isRun()){
             $this->logger->debug("say hello...");
             sleep(3);
-            throw new \Exception("asdasdasdasda");
+           //throw new \Exception("asdasdasdasda");
         }
     }
 

@@ -4,7 +4,7 @@
  * @createdAt: 05.11.2015 14:32
  */
 
-namespace Icekson\WsAppServer;
+namespace Icekson\Utils;
 
 
 use Monolog\Handler\AmqpHandler;

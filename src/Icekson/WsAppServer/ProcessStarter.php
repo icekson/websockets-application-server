@@ -5,6 +5,7 @@ namespace Icekson\WsAppServer;
 use SplObserver;
 use Icekson\WsAppServer\Exception\ThreadsException;
 use Symfony\Component\Process\Process;
+use Icekson\Utils\Logger;
 
 class ProcessStarter implements \SplSubject
 {
@@ -48,7 +49,9 @@ class ProcessStarter implements \SplSubject
      */
     public function runNewProcess($cmd)
     {
-        $search = $search = "ps uwx | grep " . preg_replace("/\s+/", "\s", $cmd);
+        $search = 'ps uwx | grep "' . preg_replace("/\s+/", "\\s", $cmd) . '"';
+        $this->getLogger()->info("cmd: " . $cmd);
+        $this->getLogger()->info("search cmd: " . $search);
         $process = new Process($search);
         $process->run();
         $out = $process->getOutput();

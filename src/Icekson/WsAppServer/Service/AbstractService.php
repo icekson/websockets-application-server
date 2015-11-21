@@ -12,12 +12,12 @@ use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Icekson\WsAppServer\Exception\ServiceException;
-use Icekson\WsAppServer\Logger;
+use Icekson\Utils\Logger;
 use Icekson\WsAppServer\ProcessStarter;
 
 use Symfony\Component\Process\Process;
 
-abstract class AbstractService extends \Thread implements ServiceInterface, ConfigAwareInterface
+abstract class AbstractService  implements ServiceInterface, ConfigAwareInterface
 {
 
     /**
@@ -56,6 +56,18 @@ abstract class AbstractService extends \Thread implements ServiceInterface, Conf
     {
         $this->name = $name;
         $this->config = $conf;
+
+    }
+
+    public function start()
+    {
+        try{
+            $this->isRun = true;
+            $this->run();
+        }catch (\Exception $ex){
+            $this->getLogger()->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
+            $this->isRun = false;
+        }
     }
 
 
@@ -95,7 +107,7 @@ abstract class AbstractService extends \Thread implements ServiceInterface, Conf
      */
     protected function getLogger()
     {
-        return $this->logger = Logger::createLogger(get_class($this) . ":".$this->name, $this->config->toArray());
+        return $this->logger = Logger::createLogger(get_class($this) . ":". $this->name, $this->getConfiguration()->toArray());
     }
 
 

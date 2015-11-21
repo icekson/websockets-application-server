@@ -13,12 +13,12 @@ class JobsService extends AbstractService
 
     public function __construct(ServiceConfig $config)
     {
-
+        parent::__construct($config->getName(), $config);
     }
 
     public function getRunCmd()
     {
-        return "php scripts/runner.php app:service --type=job --name='$this->getName()'";
+        return "php scripts/runner.php app:service --type=job --name='{$this->getName()}'";
     }
 
 
