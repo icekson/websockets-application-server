@@ -5,10 +5,8 @@
  *
  */
 
-namespace Icekson\WsAppServer\Messaging;
+namespace Icekson\Base;
 
-
-use CN\Service\RequestParser;
 use Icekson\Utils\ParamsBag;
 
 class Request
@@ -30,7 +28,7 @@ class Request
     }
 
     /**
-     * @return Properties
+     * @return ParamsBag
      */
     public function params(){
         return $this->params;

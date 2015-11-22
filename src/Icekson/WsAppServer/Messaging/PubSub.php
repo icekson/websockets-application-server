@@ -59,8 +59,9 @@ class PubSub implements PubSubInterface
 
     /**
      * @param $topic
-     * @param CallbackInterface $callback
-     * @return mixed
+     * @param $subscriptionId
+     * @return mixed|void
+     * @throws InvalidTopicException
      */
     public function unsubscribe($topic, $subscriptionId)
     {
@@ -84,7 +85,9 @@ class PubSub implements PubSubInterface
 
     /**
      * @param $topic
-     * @return mixed
+     * @return mixed|void
+     * @throws InvalidTopicException
+     *
      */
     public function unsubscribeAll($topic)
     {

@@ -6,10 +6,9 @@
 
 namespace Icekson\WsAppServer\Service;
 
-use Icekson\Utils\Logger;
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Icekson\WsAppServer\Service\Support\PubSubListenerInterface;
-use Messaging\Websocket\Handler;
+use Icekson\WsAppServer\Messaging\Websocket\Handler;
 
 class ConnectorService extends AbstractService implements PubSubListenerInterface
 {

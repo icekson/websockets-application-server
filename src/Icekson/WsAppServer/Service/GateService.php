@@ -8,6 +8,7 @@ namespace Icekson\WsAppServer\Service;
 
 use Icekson\WsAppServer\Config\ConfigureInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
+use Icekson\WsAppServer\Messaging\Websocket\Handler;
 
 class GateService extends AbstractService
 {
@@ -25,11 +26,20 @@ class GateService extends AbstractService
 
     public function run()
     {
-        while($this->isRun()){
-            $this->logger->debug("say hello...");
-            sleep(3);
-           //throw new \Exception("asdasdasdasda");
-        }
+        $loop = \React\EventLoop\Factory::create();
+        $handler = new Handler($this->getConfiguration()->getName(), $this->getConfiguration());
+
+        $webSock = new \React\Socket\Server($loop);
+        $webSock->listen($this->getConfiguration()->getPort(), '0.0.0.0');
+        $webServer = new \Ratchet\Server\IoServer(
+            new \Ratchet\Http\HttpServer(
+                new \Ratchet\WebSocket\WsServer(
+                    $handler
+                )
+            ),
+            $webSock
+        );
+        $loop->run();
     }
 
 

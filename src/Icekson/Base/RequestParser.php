@@ -1,6 +1,6 @@
 <?php
 
-namespace Icekson\Utils;
+namespace Icekson\Base;
 
 class RequestParser
 {

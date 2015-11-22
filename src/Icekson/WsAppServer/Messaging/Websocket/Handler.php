@@ -5,43 +5,36 @@
  *
  */
 
-namespace Messaging\Websocket;
+namespace Icekson\WsAppServer\Messaging\Websocket;
 
 
-use Api\Dispatcher;
 use Api\Service\Exception\BadTokenException;
 use Api\Service\Exception\NoTokenException;
 use Api\Service\IdentityInterface;
 use Api\Service\Response\Builder;
 use Api\Service\Util\Properties;
+use Icekson\Utils\Logger;
+use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
 use Icekson\WsAppServer\Messaging\AMQPPubSub;
 
 
 use Icekson\WsAppServer\Messaging\PubSub;
-use Icekson\WsAppServer\Messaging\Request;
-use Monolog\Handler\AmqpHandler;
-use Monolog\Handler\StreamHandler;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
+use Icekson\Base\Request;
 use Psr\Log\LoggerInterface;
 use Ratchet\ConnectionInterface;
 use Api\Service\Response\JsonBuilder as JsonResponseBuilder;
 
 use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Ratchet\MessageComponentInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
 use Api\Service\IdentityFinderInterface;
 
-class Handler implements MessageComponentInterface, ServiceLocatorAwareInterface
+class Handler implements MessageComponentInterface,ConfigAwareInterface
 {
 
     const VERSION = '1.1.0';
 
     private $clients;
-    /**
-     * @var ServiceLocatorInterface
-     */
-    private $sm;
 
     private $users;
 
@@ -60,8 +53,6 @@ class Handler implements MessageComponentInterface, ServiceLocatorAwareInterface
      */
     private $pubSub = null;
 
-    private $dispatcher = null;
-
     /**
      * @var null|\ArrayObject
      */
@@ -71,6 +62,10 @@ class Handler implements MessageComponentInterface, ServiceLocatorAwareInterface
      * @var null|IdentityFinderInterface
      */
     private $identityFinder = null;
+    /**
+     * @var ConfigureInterface|null
+     */
+    private $config = null;
 
     private $subscriptions = [];
     private $name ="websockets-service";
@@ -83,20 +78,12 @@ class Handler implements MessageComponentInterface, ServiceLocatorAwareInterface
     public function __construct($name, ConfigureInterface $config)
     {
         $this->name = $name;
-        //$this->setServiceLocator($sm);
+        $this->config = $config;
         $this->clients = new \SplObjectStorage;
         $this->users = new \ArrayObject();
-//        $this->pubSub = new PubSub($sm->get("Config")['cricket']['pubSubAccessKey']);
 
         $this->pubSub = new AMQPPubSub($config->toArray(), $this->getName());
         $this->internalClients = new \ArrayObject();
-
-//        $this->dispatcher = new Dispatcher();
-//        $this->dispatcher->registerServicesPath(APP . "module/ApiV1/src/ApiV1/Service/");
-//        $this->dispatcher->setTokenParameterName('token');
-//        $accessLogger = new \ApiV1\Utils\AccessLogger($sm->get('Doctrine\ORM\EntityManager')->getConnection());
-//        $this->dispatcher->setAccessLogger($accessLogger);
-//        $this->initInternalClients();
 
     }
 
@@ -116,23 +103,6 @@ class Handler implements MessageComponentInterface, ServiceLocatorAwareInterface
         $this->logger()->info("new connection $conn->resourceId ({$conn->remoteAddress}) : " . $this->clients->count() . " connected");
 
     }
-
-    public function getEntityManager()
-    {
-        $em = $this->getServiceLocator()->get('Doctrine\ORM\EntityManager');
-        try {
-            $em->getConnection()->executeQuery("SET @@session.time_zone = '+00:00'");
-        } catch (\Exception $ex) {
-            try {
-                $em->getConnection()->close();
-                $em->getConnection()->connect();
-            } catch (\Exception $e) {
-                throw $e;
-            }
-        }
-        return $em;
-    }
-
 
     /**
      * This is called before or after a socket is closed (depends on how it's closed).  SendMessage to $conn will not result in an error if it has already been closed.
@@ -258,15 +228,10 @@ class Handler implements MessageComponentInterface, ServiceLocatorAwareInterface
                 case 'rpc' :
                     $params = $this->request->params()->get('params', array());
                     $params['token'] = $this->request->params()->get('token');
-
                     $this->logger()->info("RPC: $service/$action");
                     $this->logger()->debug("rpc params", $params);
-//                    $res = $this->dispatcher->dispatch($service, $action, $params, $responseBuilder, $this->getServiceLocator());
-//                    $data = $responseBuilder->getData();
-//                    if ($responseBuilder->isError()) {
-//                        $this->logger()->error("RPC error:" . $responseBuilder->getMessagesAsString() );
-//                    }
-//                    $responseBuilder->addCustomElement('requestId', $requestId);
+                    //TODO: add rpc via amqp
+
 
                     break;
                 default:
@@ -368,47 +333,11 @@ class Handler implements MessageComponentInterface, ServiceLocatorAwareInterface
     private function logger()
     {
         if($this->_logger === null) {
-            $logger = new \Monolog\Logger(get_class($this));
-            $logger->pushHandler(new StreamHandler('php://stdout'));
-            $logger->pushHandler(new StreamHandler(ROOT_PATH . "logs/websockets_daemon.log"));
-
-            $config = $this->getServiceLocator()->get('Config');
-            $host = $config['amqp']['host'];
-            $port = $config['amqp']['port'];
-            $user = $config['amqp']['user'];
-            $password = $config['amqp']['password'];
-            $vhost = $config['amqp']['vhost'];
-            try {
-                $conn = new AMQPStreamConnection($host, $port, $user, $password, $vhost);
-                $channel = $conn->channel();
-                $channel->exchange_declare('monitor-log', 'topic', false, true, false);
-
-                register_shutdown_function(function() use ($conn, $channel){
-                    $conn->close();
-                    $channel->close();
-                });
-
-            }catch(\Exception $e){
-                echo 'amqp logger error: ' . $e->getMessage() . "\n" . $e->getTraceAsString();
-            }
-            if($channel !== null) {
-                $logger->pushHandler(new AmqpHandler($channel, 'monitor-log'));
-            }
-            $this->_logger = $logger;
+           $this->_logger = Logger::createLogger( get_class($this). ":" .$this->getName() , $this->config->toArray());
         }
         return $this->_logger;
     }
 
-
-    /**
-     * Set service locator
-     *
-     * @param ServiceLocatorInterface $serviceLocator
-     */
-    public function setServiceLocator(ServiceLocatorInterface $serviceLocator)
-    {
-        $this->sm = $serviceLocator;
-    }
 
     /**
      * @return mixed
@@ -425,17 +354,6 @@ class Handler implements MessageComponentInterface, ServiceLocatorAwareInterface
     public function getUsers()
     {
         return $this->users;
-    }
-
-
-    /**
-     * Get service locator
-     *
-     * @return ServiceLocatorInterface
-     */
-    public function getServiceLocator()
-    {
-        return $this->sm;
     }
 
     /**
@@ -475,8 +393,18 @@ class Handler implements MessageComponentInterface, ServiceLocatorAwareInterface
     public function setIdentityFinder(IdentityFinderInterface $finder)
     {
         $this->identityFinder = $finder;
-        if ($finder instanceof ServiceLocatorAwareInterface) {
-            $finder->setServiceLocator($this->getServiceLocator());
+        if ($finder instanceof ConfigAwareInterface) {
+            $finder->setConfiguration($this->getConfiguration());
         }
+    }
+
+    public function getConfiguration()
+    {
+        return $this->config;
+    }
+
+    public function setConfiguration(ConfigureInterface $config)
+    {
+        $this->config = $config;
     }
 }

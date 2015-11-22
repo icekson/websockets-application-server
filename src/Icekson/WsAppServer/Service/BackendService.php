@@ -23,7 +23,7 @@ class BackendService extends AbstractService
     public function run()
     {
         while($this->isRun()){
-            $this->logger->debug($this->getName() . ": run");
+            $this->getLogger()->debug($this->getName() . ": run");
             sleep(3);
         }
     }
