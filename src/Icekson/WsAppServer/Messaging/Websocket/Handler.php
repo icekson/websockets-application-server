@@ -174,14 +174,14 @@ class Handler implements MessageComponentInterface,ConfigAwareInterface
 
         try {
 
-            $identity = $this->getIdentity(new Properties($this->request->params()->toArray()));
-            if (empty($identity) || $identity->getId() === null) {
-                throw new BadTokenException("Bad token is given");
-            }
-            $this->users[$from->resourceId] = $identity;
-            foreach ($this->internalClients as $client) {
-                $client->init($this, $identity);
-            }
+//            $identity = $this->getIdentity(new Properties($this->request->params()->toArray()));
+//            if (empty($identity) || $identity->getId() === null) {
+//                throw new BadTokenException("Bad token is given");
+//            }
+//            $this->users[$from->resourceId] = $identity;
+//            foreach ($this->internalClients as $client) {
+//                $client->init($this, $identity);
+//            }
 
             $this->logger()->info("new incomming message ({$from->resourceId} ({$from->remoteAddress}:".($identity ? $identity->getId() : "empty")."))" . "; message: " . $msg);
 

@@ -8,6 +8,7 @@
 namespace Icekson\WsAppServer;
 
 
+use Icekson\Utils\Registry;
 use Icekson\WsAppServer\Config\ApplicationConfig;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
@@ -17,6 +18,7 @@ use Icekson\Utils\Logger;
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Icekson\WsAppServer\Exception\ServiceException;
 use Icekson\WsAppServer\Service\ServiceInterface;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class Application implements \SplObserver, ConfigAwareInterface
 {
@@ -38,11 +40,23 @@ class Application implements \SplObserver, ConfigAwareInterface
 
     private $isStoped = false;
 
+    private $eventDispatcher = null;
+
 
     public function __construct(ApplicationConfig $config)
     {
         $this->config = $config;
         $this->logger = Logger::createLogger(get_class($this), $config->get('amqp', []));
+        $this->eventDispatcher = new EventDispatcher();
+        Registry::getInstance()->set('application', $this);
+    }
+
+    /**
+     * @return null|EventDispatcher
+     */
+    public function getEventDispatcher()
+    {
+        return $this->eventDispatcher;
     }
 
     public function start()
@@ -133,7 +147,7 @@ class Application implements \SplObserver, ConfigAwareInterface
         if(!class_exists($class)){
             throw new ServiceException("Invalid service class name set for service: {$class}");
         }
-        $instance = new $class($conf);
+        $instance = new $class($this, $conf);
 
         if(!$instance instanceof ServiceInterface){
             throw new ServiceException("Provided service class doesn't implement ServiceInterface");

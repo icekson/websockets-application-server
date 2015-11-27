@@ -6,27 +6,37 @@
 
 namespace Icekson\WsAppServer\Service;
 
+use Icekson\WsAppServer\Application;
 use Icekson\WsAppServer\Config\ServiceConfig;
+use Icekson\WsAppServer\Service\Support\PubSubConsumer;
+use Icekson\WsAppServer\Service\Support\PubSubListener;
 use Icekson\WsAppServer\Service\Support\PubSubListenerInterface;
 use Icekson\WsAppServer\Messaging\Websocket\Handler;
 
-class ConnectorService extends AbstractService implements PubSubListenerInterface
+class ConnectorService extends AbstractService
 {
 
-    public function __construct(ServiceConfig $config)
+    private $pubSubConsumer = null;
+
+    public function __construct(Application $app, ServiceConfig $config)
     {
-        parent::__construct($config->getName(), $config);
+        parent::__construct($config->getName(), $config, $app);
     }
 
     public function getRunCmd()
     {
-        return "php scripts/runner.php app:service --type=connector --name='{$this->getName()}'";
+        return sprintf("%s scripts/runner.php app:service --type=connector --name='%s'", $this->getConfiguration()->get("php_path"), $this->getName());
     }
 
     public function run()
     {
         $loop = \React\EventLoop\Factory::create();
         $handler = new Handler($this->getConfiguration()->getName(), $this->getConfiguration());
+
+        $em = $this->getApplication()->getEventDispatcher();
+        $em->addListener('pubsub.messagePublished', [$this, 'onPubSubMessage']);
+        $pubsubConsumer = new PubSubConsumer(new PubSubListener($em), $this->getConfiguration());
+        $pubsubConsumer->start();
 
         $webSock = new \React\Socket\Server($loop);
         $webSock->listen($this->getConfiguration()->getPort(), '0.0.0.0');

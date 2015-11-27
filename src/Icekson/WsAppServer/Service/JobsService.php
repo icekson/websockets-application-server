@@ -6,19 +6,20 @@
 
 namespace Icekson\WsAppServer\Service;
 
+use Icekson\WsAppServer\Application;
 use Icekson\WsAppServer\Config\ServiceConfig;
 
 class JobsService extends AbstractService
 {
 
-    public function __construct(ServiceConfig $config)
+    public function __construct(Application $app, ServiceConfig $config)
     {
-        parent::__construct($config->getName(), $config);
+        parent::__construct($config->getName(), $config, $app);
     }
 
     public function getRunCmd()
     {
-        return "php scripts/runner.php app:service --type=job --name='{$this->getName()}'";
+        return sprintf("%s scripts/runner.php app:service --type=job --name='%s'", $this->getConfiguration()->get("php_path"), $this->getName());
     }
 
 

@@ -93,6 +93,7 @@ class AMQPPubSubConsumer
     public function consume()
     {
         $consumer = $this;
+        $this->logger->debug("pub sub consumer started");
         $this->channel->basic_consume($this->exchangeName . "." . $this->serviceName, '', false, false, false, false, [$this, 'proccessMsg']);
         while (count($this->channel->callbacks)) {
             $this->channel->wait();

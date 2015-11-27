@@ -8,6 +8,7 @@
 namespace Icekson\WsAppServer\Service;
 
 
+use Icekson\WsAppServer\Application;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
@@ -46,17 +47,31 @@ abstract class AbstractService  implements ServiceInterface, ConfigAwareInterfac
      */
     protected $logger = null;
 
+    /**
+     * @var null|Application
+     */
+    protected $app = null;
+
 
     /**
      * AbtractService constructor.
      * @param $name
      * @param ServiceConfig $conf
      */
-    public function __construct($name, ServiceConfig $conf)
+    public function __construct($name, ServiceConfig $conf, Application $app)
     {
         $this->name = $name;
         $this->config = $conf;
+        $this->app = $app;
 
+    }
+
+    /**
+     * @return Application|null
+     */
+    public function getApplication()
+    {
+        return $this->app;
     }
 
     public function start()

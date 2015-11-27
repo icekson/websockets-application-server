@@ -9,6 +9,7 @@
     },
     "services": {
       "gate-server-1": {
+        "php_path": "php7",
         "name": "gate-server-1",
         "class": "Icekson\\WsAppServer\\Service\\GateService",
         "host": "127.0.0.1",
@@ -16,6 +17,7 @@
         "internal-port": 5001
       },
       "connector-server-1": {
+        "php_path": "php7",
         "name": "connector-server-1",
         "class": "Icekson\\WsAppServer\\Service\\ConnectorService",
         "host": "127.0.0.1",
@@ -23,6 +25,7 @@
         "internal-port": 5101
       },
       "connector-server-2": {
+        "php_path": "php7",
         "name": "connector-server-2",
         "class": "Icekson\\WsAppServer\\Service\\ConnectorService",
         "host": "127.0.0.1",
@@ -30,11 +33,13 @@
         "internal-port": 5111
       },
       "backend-server-1": {
+        "php_path": "php7",
         "name": "backend-server-1",
         "class": "Icekson\\WsAppServer\\Service\\BackendService",
         "internal-port": 6000
       },
       "backend-server-2": {
+        "php_path": "php7",
         "name": "backend-server-2",
         "class": "Icekson\\WsAppServer\\Service\\BackendService",
         "internal-port": 6001
