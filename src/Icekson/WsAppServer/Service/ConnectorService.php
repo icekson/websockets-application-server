@@ -11,7 +11,7 @@ use Icekson\WsAppServer\Config\ServiceConfig;
 
 use Icekson\WsAppServer\Messaging\AmqpAsync\PubSubConsumer;
 use Icekson\WsAppServer\Rpc\RPC;
-use Icekson\WsAppServer\Messaging\Websocket\Handler;
+use Icekson\WsAppServer\Messaging\Websocket\ConnectorHandler;
 
 class ConnectorService extends AbstractService
 {
@@ -35,7 +35,7 @@ class ConnectorService extends AbstractService
     public function run()
     {
         $loop = $this->getLoop();
-        $handler = new Handler($this->getConfiguration()->getName(), $loop, $this->getConfiguration());
+        $handler = new ConnectorHandler($this->getConfiguration()->getName(), $loop, $this->getConfiguration());
         $this->pubsubConsumer = new PubSubConsumer($this->getConfiguration()->toArray(), $loop, $handler, $this->getName());
         $this->pubsubConsumer->consume();
 

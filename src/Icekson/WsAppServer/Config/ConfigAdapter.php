@@ -15,7 +15,7 @@ use Noodlehaus\FileParser\Json;
 use Noodlehaus\FileParser\Php;
 use Noodlehaus\FileParser\Yaml;
 
-class ConfigAdapter extends \Threaded implements ConfigureInterface
+class ConfigAdapter  implements ConfigureInterface
 {
     /**
      * @var \ArrayObject

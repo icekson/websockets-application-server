@@ -40,21 +40,17 @@ class ResponseQueue
     private $channelName = "";
 
     /**
+     * ResponseQueue constructor.
      * @param array $config
-     * @param string $exchangeName
-     * @param string $queue
-     * @throws \Exception
+     * @param null $exchangeName
      */
-    public function __construct(array $config, $exchangeName = null, $queue = null)
+    public function __construct(array $config, $exchangeName = null)
     {
         $this->logger = Logger::createLogger(get_class($this), $config);
         if($exchangeName === null){
             $exchangeName = 'rpc-response';
         }
-        if($queue === null){
-            $queue = '';
-        }
-        $this->queueName = $queue;
+
         $this->exchangeName = $exchangeName;
 
         $host = $config['amqp']['host'];
@@ -76,7 +72,7 @@ class ResponseQueue
 
         $this->channel = $this->connection->channel();
         $this->channel->exchange_declare($this->exchangeName, 'direct', false, true, false);
-        $this->channel->queue_declare($this->queueName, false, true, false, false, false);
+        //$this->channel->queue_declare($this->queueName, false, true, false, false, false);
     }
 
     public function __destruct()

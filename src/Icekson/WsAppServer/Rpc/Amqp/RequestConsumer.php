@@ -24,7 +24,7 @@ class RequestConsumer extends Consumer
     public function __construct(array $config, LoopInterface $loop, RequestHandlerInterface $listener, $serviceName)
     {
         $exchangeName = "rpc-request";
-        $this->type = "fanout";
+        $this->type = "direct";
         parent::__construct($config, $loop, $serviceName, $exchangeName);
         $this->queueName = $exchangeName;
         $this->handler = $listener;

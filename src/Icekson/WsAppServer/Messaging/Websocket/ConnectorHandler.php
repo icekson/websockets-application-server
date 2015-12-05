@@ -30,11 +30,10 @@ use Ratchet\ConnectionInterface;
 use Api\Service\Response\JsonBuilder as JsonResponseBuilder;
 
 use React\EventLoop\LoopInterface;
-use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Ratchet\MessageComponentInterface;
 use Api\Service\IdentityFinderInterface;
 
-class Handler implements MessageComponentInterface, ConfigAwareInterface, ResponseHandlerInterface, PubSubListenerInterface
+class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterface, ResponseHandlerInterface, PubSubListenerInterface
 {
 
     const VERSION = '1.1.0';
@@ -59,11 +58,6 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
     private $pubSub = null;
 
     /**
-     * @var null|\ArrayObject
-     */
-    private $internalClients = null;
-
-    /**
      * @var null|IdentityFinderInterface
      */
     private $identityFinder = null;
@@ -74,10 +68,6 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
 
     private $subscriptions = [];
     private $name ="websockets-service";
-    /**
-     * @var null|ResponseHandlerInterface
-     */
-    private $rpcHandler = null;
 
     /**
      * @var RPC|null
@@ -108,7 +98,6 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
         $this->users = new \ArrayObject();
 
         $this->pubSub = new AMQPPubSub($config->toArray(), $this->getName());
-        $this->internalClients = new \ArrayObject();
         $this->rpcQueue = new \ArrayObject();
         $this->rpc = new RPC(RPC::TYPE_REQUEST, $loop, $this, $config->get("name"), $this->getConfiguration()->toArray());;
 
@@ -189,7 +178,7 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
 
         $url = $this->request->params()->get('url');
         $requestId = $this->request->params()->get('requestId');
-        $pubSubPrivateKey = $this->request->params()->get('privateKey');
+
         $subscriptionId = $this->request->params()->get('subscriptionId');
         $publisherId = $this->request->params()->get('publisherId');
         $event = $this->request->params()->get('event');
@@ -197,7 +186,6 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
         $action = preg_replace("/.*\/([\w_-]+)/i", "$1", $url);
 
         $responseBuilder = new JsonResponseBuilder();
-        $handler = $this;
         $identity = null;
 
         try {
@@ -214,9 +202,6 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
             $this->logger()->info("new incomming message ({$from->resourceId} ({$from->remoteAddress}:".($identity ? $identity->getId() : "empty")."))" . "; message: " . $msg);
 
             switch ($operation) {
-                case 'init' :
-
-                    break;
                 case 'subscribe' :
                     if (empty($event)) {
                         throw new \InvalidArgumentException("event name parameter is empty");
@@ -227,8 +212,11 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
                     }
                     $this->subscriptions[$from->resourceId][$event] = $subscriptionId;
                     $this->logger()->info("Subscribe: " . $this->request->params()->toArray()['event'] . " - " . $subscriptionId);
-                    $this->notify('subscribe',$from, new PubSub\Utils\ParamsBag($this->request->params()->toArray()), $responseBuilder);
-                    $id = $identity->getId();
+                    if($identity) {
+                        $id = $identity->getId();
+                    }else{
+                        $id = -1;
+                    }
                     $this->pubSub->subscribe($event, $id, new PubSub\Subscriber(function(){}));
                     $responseBuilder->addCustomElement("subscriptionId", $subscriptionId);
                     $responseBuilder->addCustomElement("subscibed_event", $event);
@@ -249,7 +237,7 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
                     $params = $this->request->params()->get('params', array());
                     $this->logger()->info("Publish: event - $event; publisherId - $publisherId");
                     $this->logger()->debug("Publish data: " . json_encode($params));
-                    $this->notify('publish',$from, new PubSub\Utils\ParamsBag($this->request->params()->toArray()), $responseBuilder);
+
                     $this->pubSub->publish($event, $publisherId, new PubSub\Utils\ParamsBag($params));
                     break;
 
@@ -264,7 +252,6 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
                 default:
                     $responseBuilder->setError("Invalid request");
             }
-            $this->notify('processed',$from, new PubSub\Utils\ParamsBag($this->request->params()->toArray()), $responseBuilder);
 
             $from->send($responseBuilder->result());
 
@@ -369,17 +356,6 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
 
 
     /**
-     * @param $type
-     * @param ConnectionInterface $conn
-     * @param PubSub\Utils\ParamsBag $params
-     * @param Builder $response
-     */
-    public function notify($type, ConnectionInterface $conn, PubSub\Utils\ParamsBag $params, Builder &$response)
-    {
-
-    }
-
-    /**
      * @return IdentityInterface
      */
     public function getIdentity(Properties $params)
@@ -412,6 +388,7 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
     }
 
     /**
+     * @desc RPC Response handler
      * @param ResponseInterface $resp
      */
     public function onResponse(ResponseInterface $resp)
@@ -431,15 +408,24 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
         }
     }
 
+    /**
+     * @param $requestId
+     * @param $url
+     * @param array $params
+     */
     public function sendRequest($requestId, $url, array $params)
     {
         $this->rpc->sendRequest($requestId, $url, $params);
     }
 
+    /**
+     * @desc PubSub Handler
+     * @param $msg
+     * @return void
+     */
     public function onPubSubMessage($msg)
     {
-        // $msg = base64_decode($msg);
-        $this->logger()->info("onPubSubEventPublished: " . $msg);
+        $this->logger()->info("onPubSubMessage: " . $msg);
 
         $message = @json_decode($msg);
         if(empty($message) || !isset($message->event) || !isset($message->event_data)){
@@ -454,14 +440,14 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
         $userId = $tmp[count($tmp)-1];
         $conns = $this->findConnectionsByUserId($userId);
         if(empty($conns)){
-            $this->logger()->warning("onPubSubEventPublished: No connection is found for user: " . $userId);
+            $this->logger()->warning("onPubSubMessage: No connection is found for user: " . $userId);
         }
         if(count($conns) > 0){
-            $this->logger()->info("onPubSubEventPublished: ".count($conns)." connections for user: " . $userId);
+            $this->logger()->info("onPubSubMessage: ".count($conns)." connections for user: " . $userId);
             $topic = implode('.',array_slice($tmp, 0, count($tmp)-1));
             foreach ($conns as $conn) {
                 if(isset($this->subscriptions[$conn->resourceId][$topic])) {
-                    $this->logger()->debug("onPubSubEventPublished: Send $topic event message to user: " . $userId . " in connection resourceId: " . $conn->resourceId);
+                    $this->logger()->debug("onPubSubMessage: Send $topic event message to user: " . $userId . " in connection resourceId: " . $conn->resourceId);
                     $resp = new JsonResponseBuilder();
                     $resp->addCustomElement('event', $topic);
                     $resp->addCustomElement('subscriptionId', $this->subscriptions[$conn->resourceId][$topic]);
@@ -469,7 +455,7 @@ class Handler implements MessageComponentInterface, ConfigAwareInterface, Respon
                     $conn->send($resp->result());
                     $resp = null;
                 }else{
-                    $this->logger()->warning("onPubSubEventPublished: no subscriptions for event $eventName for user $userId and  connection resourceId: " . $conn->resourceId);
+                    $this->logger()->warning("onPubSubMessage: no subscriptions for event $eventName for user $userId and  connection resourceId: " . $conn->resourceId);
                 }
             }
 

@@ -8,30 +8,41 @@
       "vhost": "/cricket_dev"
     },
     "services": {
-
+      "gate-server-1": {
+        "php_path": "php7",
+        "name": "gate-server-1",
+        "class": "Icekson\\WsAppServer\\Service\\GateService",
+        "host": "195.184.70.228",
+        "port": 5000
+      },
       "connector-server-1": {
         "php_path": "php7",
         "name": "connector-server-1",
         "class": "Icekson\\WsAppServer\\Service\\ConnectorService",
-        "host": "127.0.0.1",
+        "host": "195.184.70.228",
         "port": 5100
       },
       "connector-server-2": {
         "php_path": "php7",
         "name": "connector-server-2",
         "class": "Icekson\\WsAppServer\\Service\\ConnectorService",
-        "host": "127.0.0.1",
+        "host": "195.184.70.228",
         "port": 5110
       },
       "backend-server-1": {
         "php_path": "php7",
         "name": "backend-server-1",
-        "class": "Icekson\\WsAppServer\\Service\\BackendService"
+        "class": "Icekson\\WsAppServer\\Service\\BackendEchoService"
       },
       "backend-server-2": {
         "php_path": "php7",
         "name": "backend-server-2",
-        "class": "Icekson\\WsAppServer\\Service\\BackendService"
+        "class": "Icekson\\WsAppServer\\Service\\BackendEchoService"
+      },
+      "backend-server-3": {
+        "php_path": "php7",
+        "name": "backend-server-3",
+        "class": "Icekson\\WsAppServer\\Service\\BackendEchoService"
       }
     }
   }
