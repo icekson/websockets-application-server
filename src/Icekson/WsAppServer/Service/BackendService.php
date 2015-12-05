@@ -8,10 +8,17 @@ namespace Icekson\WsAppServer\Service;
 
 use Icekson\WsAppServer\Application;
 use Icekson\WsAppServer\Config\ServiceConfig;
+use Icekson\WsAppServer\Rpc\Handler\RequestHandlerInterface;
+use Icekson\WsAppServer\Rpc\RequestInterface;
+use Icekson\WsAppServer\Rpc\RPC;
 
-class BackendService extends AbstractService
+class BackendService extends AbstractService implements RequestHandlerInterface
 {
 
+    /**
+     * @var null|RPC
+     */
+    private $rpc = null;
     public function __construct(Application $app, ServiceConfig $config)
     {
         parent::__construct($config->getName(), $config, $app);
@@ -23,10 +30,17 @@ class BackendService extends AbstractService
 
     public function run()
     {
-        while($this->isRun()){
-            $this->getLogger()->debug($this->getName() . ": run");
-            sleep(3);
-        }
+        $this->rpc = new RPC(RPC::TYPE_RESPONSE, $this->getLoop(), $this, $this->getName(), $this->getConfiguration()->toArray());
+        $this->getLoop()->run();
+
     }
 
+    public function onRequest(RequestInterface $req)
+    {
+        $this->getLogger()->debug("onRequest" . $req->serialize());
+
+        $this->rpc->sendResponse($req->getRequestId(), $req->getReplyTo(), ["someresp" => uniqid()]);
+
+
+    }
 }

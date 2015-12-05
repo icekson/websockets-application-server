@@ -1,12 +1,11 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: 1
- * Date: 05.11.2015
- * Time: 12:10
+ *
+ * @author: a.itsekson
+ * @date: 05.12.2015 12:06
  */
 
-namespace Icekson\WsAppServer\Messaging;
+namespace Icekson\WsAppServer\Messaging\Amqp;
 
 
 
@@ -20,7 +19,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 use Psr\Log\LoggerInterface;
 use Icekson\Utils\Logger;
 
-class AMQPPubSub implements PubSubInterface
+class PubSub implements PubSubInterface
 {
     /**
      * @var null|AMQPStreamConnection

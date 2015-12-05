@@ -27,20 +27,10 @@ class GateService extends AbstractService
 
     public function run()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $handler = new Handler($this->getConfiguration()->getName(), $this->getConfiguration());
-
-        $webSock = new \React\Socket\Server($loop);
-        $webSock->listen($this->getConfiguration()->getPort(), '0.0.0.0');
-        $webServer = new \Ratchet\Server\IoServer(
-            new \Ratchet\Http\HttpServer(
-                new \Ratchet\WebSocket\WsServer(
-                    $handler
-                )
-            ),
-            $webSock
-        );
-        $loop->run();
+//        $loop = \React\EventLoop\Factory::create();
+//
+//
+//        $loop->run();
     }
 
 

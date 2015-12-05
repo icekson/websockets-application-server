@@ -16,20 +16,25 @@ use Api\Service\Util\Properties;
 use Icekson\Utils\Logger;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
-use Icekson\WsAppServer\Messaging\AMQPPubSub;
+use Icekson\WsAppServer\Messaging\Amqp\PubSub as AMQPPubSub;
 
 
 use Icekson\WsAppServer\Messaging\PubSub;
 use Icekson\Base\Request;
+use Icekson\WsAppServer\Rpc\Handler\ResponseHandlerInterface;
+use Icekson\WsAppServer\Rpc\ResponseInterface;
+use Icekson\WsAppServer\Rpc\RPC;
+use Icekson\WsAppServer\Service\Support\PubSubListenerInterface;
 use Psr\Log\LoggerInterface;
 use Ratchet\ConnectionInterface;
 use Api\Service\Response\JsonBuilder as JsonResponseBuilder;
 
+use React\EventLoop\LoopInterface;
 use Zend\ServiceManager\ServiceLocatorAwareInterface;
 use Ratchet\MessageComponentInterface;
 use Api\Service\IdentityFinderInterface;
 
-class Handler implements MessageComponentInterface,ConfigAwareInterface
+class Handler implements MessageComponentInterface, ConfigAwareInterface, ResponseHandlerInterface, PubSubListenerInterface
 {
 
     const VERSION = '1.1.0';
@@ -69,13 +74,33 @@ class Handler implements MessageComponentInterface,ConfigAwareInterface
 
     private $subscriptions = [];
     private $name ="websockets-service";
+    /**
+     * @var null|ResponseHandlerInterface
+     */
+    private $rpcHandler = null;
+
+    /**
+     * @var RPC|null
+     */
+    private $rpc = null;
+
+    /**
+     * @var null|\ArrayObject
+     */
+    private $rpcQueue = null;
 
     public function getName()
     {
         return $this->name;
     }
 
-    public function __construct($name, ConfigureInterface $config)
+    /**
+     * Handler constructor.
+     * @param $name
+     * @param LoopInterface $loop
+     * @param ConfigureInterface $config
+     */
+    public function __construct($name, LoopInterface $loop,ConfigureInterface $config)
     {
         $this->name = $name;
         $this->config = $config;
@@ -84,8 +109,11 @@ class Handler implements MessageComponentInterface,ConfigAwareInterface
 
         $this->pubSub = new AMQPPubSub($config->toArray(), $this->getName());
         $this->internalClients = new \ArrayObject();
+        $this->rpcQueue = new \ArrayObject();
+        $this->rpc = new RPC(RPC::TYPE_REQUEST, $loop, $this, $config->get("name"), $this->getConfiguration()->toArray());;
 
     }
+
 
     public function getVersion()
     {
@@ -230,9 +258,8 @@ class Handler implements MessageComponentInterface,ConfigAwareInterface
                     $params['token'] = $this->request->params()->get('token');
                     $this->logger()->info("RPC: $service/$action");
                     $this->logger()->debug("rpc params", $params);
-                    //TODO: add rpc via amqp
-
-
+                    $this->rpcQueue[$from->resourceId][] = $requestId;
+                    $this->sendRequest($requestId, "$service/$action", $params);
                     break;
                 default:
                     $responseBuilder->setError("Invalid request");
@@ -271,45 +298,6 @@ class Handler implements MessageComponentInterface,ConfigAwareInterface
 
     }
 
-    public function onPubsubEventPublished($msg)
-    {
-       // $msg = base64_decode($msg);
-        $this->logger()->info("onPubSubEventPublished: " . $msg);
-
-        $message = @json_decode($msg);
-        if(empty($message) || !isset($message->event) || !isset($message->event_data)){
-            $this->logger()->error("Invalid message received: " . $msg);
-            return;
-        }
-
-        $eventName = $message->event;
-        $data = $message->event_data;
-
-        $tmp = explode('.', $eventName);
-        $userId = $tmp[count($tmp)-1];
-        $conns = $this->findConnectionsByUserId($userId);
-        if(empty($conns)){
-            $this->logger()->warning("onPubSubEventPublished: No connection is found for user: " . $userId);
-        }
-        if(count($conns) > 0){
-            $this->logger()->info("onPubSubEventPublished: ".count($conns)." connections for user: " . $userId);
-            $topic = implode('.',array_slice($tmp, 0, count($tmp)-1));
-            foreach ($conns as $conn) {
-                if(isset($this->subscriptions[$conn->resourceId][$topic])) {
-                    $this->logger()->debug("onPubSubEventPublished: Send $topic event message to user: " . $userId . " in connection resourceId: " . $conn->resourceId);
-                    $resp = new JsonResponseBuilder();
-                    $resp->addCustomElement('event', $topic);
-                    $resp->addCustomElement('subscriptionId', $this->subscriptions[$conn->resourceId][$topic]);
-                    $resp->setData($data);
-                    $conn->send($resp->result());
-                    $resp = null;
-                }else{
-                    $this->logger()->warning("onPubSubEventPublished: no subscriptions for event $eventName for user $userId and  connection resourceId: " . $conn->resourceId);
-                }
-            }
-
-        }
-    }
 
     /**
      * @param $id
@@ -320,6 +308,21 @@ class Handler implements MessageComponentInterface,ConfigAwareInterface
         $res = [];
         foreach($this->clients as $conn){
             if(isset($this->users[$conn->resourceId]) && $this->users[$conn->resourceId]->getId() == $id){
+                $res[] = $conn;
+            }
+        }
+        return $res;
+    }
+
+    /**
+     * @param $id
+     * @return ConnectionInterface[]
+     */
+    private function findConnectionsByRequestId($id)
+    {
+        $res = [];
+        foreach($this->clients as $conn){
+            if(isset($this->rpcQueue[$conn->resourceId]) && in_array($id, $this->rpcQueue[$conn->resourceId])){
                 $res[] = $conn;
             }
         }
@@ -406,5 +409,70 @@ class Handler implements MessageComponentInterface,ConfigAwareInterface
     public function setConfiguration(ConfigureInterface $config)
     {
         $this->config = $config;
+    }
+
+    /**
+     * @param ResponseInterface $resp
+     */
+    public function onResponse(ResponseInterface $resp)
+    {
+        $this->logger()->info("on rpc response: " . $resp->serialize());
+        $cons = $this->findConnectionsByRequestId($resp->getRequestId());
+        $this->logger()->info("on rpc response: found connections: " . count($cons));
+        foreach ($cons as $conn) {
+            $conn->send($resp->serialize());
+            $this->logger()->info("on rpc response: send resp to client: " . $conn->resourceId);
+            if(isset($this->rpcQueue[$conn->resourceId])){
+                $index = array_search($resp->getRequestId(), $this->rpcQueue[$conn->resourceId]);
+                if($index > -1){
+                    unset($this->rpcQueue[$conn->resourceId][$index]);
+                }
+            }
+        }
+    }
+
+    public function sendRequest($requestId, $url, array $params)
+    {
+        $this->rpc->sendRequest($requestId, $url, $params);
+    }
+
+    public function onPubSubMessage($msg)
+    {
+        // $msg = base64_decode($msg);
+        $this->logger()->info("onPubSubEventPublished: " . $msg);
+
+        $message = @json_decode($msg);
+        if(empty($message) || !isset($message->event) || !isset($message->event_data)){
+            $this->logger()->error("Invalid message received: " . $msg);
+            return;
+        }
+
+        $eventName = $message->event;
+        $data = $message->event_data;
+
+        $tmp = explode('.', $eventName);
+        $userId = $tmp[count($tmp)-1];
+        $conns = $this->findConnectionsByUserId($userId);
+        if(empty($conns)){
+            $this->logger()->warning("onPubSubEventPublished: No connection is found for user: " . $userId);
+        }
+        if(count($conns) > 0){
+            $this->logger()->info("onPubSubEventPublished: ".count($conns)." connections for user: " . $userId);
+            $topic = implode('.',array_slice($tmp, 0, count($tmp)-1));
+            foreach ($conns as $conn) {
+                if(isset($this->subscriptions[$conn->resourceId][$topic])) {
+                    $this->logger()->debug("onPubSubEventPublished: Send $topic event message to user: " . $userId . " in connection resourceId: " . $conn->resourceId);
+                    $resp = new JsonResponseBuilder();
+                    $resp->addCustomElement('event', $topic);
+                    $resp->addCustomElement('subscriptionId', $this->subscriptions[$conn->resourceId][$topic]);
+                    $resp->setData($data);
+                    $conn->send($resp->result());
+                    $resp = null;
+                }else{
+                    $this->logger()->warning("onPubSubEventPublished: no subscriptions for event $eventName for user $userId and  connection resourceId: " . $conn->resourceId);
+                }
+            }
+
+        }
     }
 }

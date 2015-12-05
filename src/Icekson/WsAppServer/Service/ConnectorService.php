@@ -8,15 +8,19 @@ namespace Icekson\WsAppServer\Service;
 
 use Icekson\WsAppServer\Application;
 use Icekson\WsAppServer\Config\ServiceConfig;
-use Icekson\WsAppServer\Service\Support\PubSubConsumer;
-use Icekson\WsAppServer\Service\Support\PubSubListener;
-use Icekson\WsAppServer\Service\Support\PubSubListenerInterface;
+
+use Icekson\WsAppServer\Messaging\AmqpAsync\PubSubConsumer;
+use Icekson\WsAppServer\Rpc\RPC;
 use Icekson\WsAppServer\Messaging\Websocket\Handler;
 
 class ConnectorService extends AbstractService
 {
 
-    private $pubSubConsumer = null;
+    private $pubsubConsumer = null;
+    /**
+     * @var null|RPC
+     */
+    private $rpc = null;
 
     public function __construct(Application $app, ServiceConfig $config)
     {
@@ -30,13 +34,10 @@ class ConnectorService extends AbstractService
 
     public function run()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $handler = new Handler($this->getConfiguration()->getName(), $this->getConfiguration());
-
-        $em = $this->getApplication()->getEventDispatcher();
-        $em->addListener('pubsub.messagePublished', [$this, 'onPubSubMessage']);
-        $pubsubConsumer = new PubSubConsumer(new PubSubListener($em), $this->getConfiguration());
-        $pubsubConsumer->start();
+        $loop = $this->getLoop();
+        $handler = new Handler($this->getConfiguration()->getName(), $loop, $this->getConfiguration());
+        $this->pubsubConsumer = new PubSubConsumer($this->getConfiguration()->toArray(), $loop, $handler, $this->getName());
+        $this->pubsubConsumer->consume();
 
         $webSock = new \React\Socket\Server($loop);
         $webSock->listen($this->getConfiguration()->getPort(), '0.0.0.0');
@@ -51,8 +52,5 @@ class ConnectorService extends AbstractService
         $loop->run();
     }
 
-    public function onPubSubMessage($msg)
-    {
-        $this->getLogger()->debug("onPubSubMessage: " . $msg);
-    }
+
 }

@@ -7,6 +7,8 @@
 namespace Icekson\WsAppServer\Service;
 
 
+use React\EventLoop\LoopInterface;
+
 interface ServiceInterface
 {
     /**
@@ -21,6 +23,11 @@ interface ServiceInterface
     public function startAsProcess();
 
     public function stop();
+
+    /**
+     * @return LoopInterface
+     */
+    public function getLoop();
 
     /**
      * @return string

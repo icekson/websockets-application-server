@@ -16,6 +16,7 @@ use Icekson\WsAppServer\Exception\ServiceException;
 use Icekson\Utils\Logger;
 use Icekson\WsAppServer\ProcessStarter;
 
+use React\EventLoop\LoopInterface;
 use Symfony\Component\Process\Process;
 
 abstract class AbstractService  implements ServiceInterface, ConfigAwareInterface
@@ -67,6 +68,14 @@ abstract class AbstractService  implements ServiceInterface, ConfigAwareInterfac
     }
 
     /**
+     * @return LoopInterface
+     */
+    public function getLoop()
+    {
+        return $this->app->getLoop();
+    }
+
+    /**
      * @return Application|null
      */
     public function getApplication()
@@ -79,7 +88,7 @@ abstract class AbstractService  implements ServiceInterface, ConfigAwareInterfac
         try{
             $this->isRun = true;
             $this->run();
-        }catch (\Exception $ex){
+        }catch (\Throwable $ex){
             $this->getLogger()->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
             $this->isRun = false;
         }

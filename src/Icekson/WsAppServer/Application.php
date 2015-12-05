@@ -18,6 +18,7 @@ use Icekson\Utils\Logger;
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Icekson\WsAppServer\Exception\ServiceException;
 use Icekson\WsAppServer\Service\ServiceInterface;
+use React\EventLoop\LoopInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class Application implements \SplObserver, ConfigAwareInterface
@@ -32,6 +33,11 @@ class Application implements \SplObserver, ConfigAwareInterface
      * @var null|\Psr\Log\LoggerInterface
      */
     private $logger = null;
+
+    /**
+     * @var null|LoopInterface
+     */
+    private $loop = null;
 
     /**
      * @var array
@@ -49,6 +55,7 @@ class Application implements \SplObserver, ConfigAwareInterface
         $this->logger = Logger::createLogger(get_class($this), $config->get('amqp', []));
         $this->eventDispatcher = new EventDispatcher();
         Registry::getInstance()->set('application', $this);
+        $this->loop = \React\EventLoop\Factory::create();
     }
 
     /**
@@ -66,6 +73,9 @@ class Application implements \SplObserver, ConfigAwareInterface
         $amqpConf = $this->config->get('amqp', []);
         $servicesConfig = $this->config->getServicesConfig();
 
+        $loop = $this->loop;
+        $this->loop = $loop;
+        ProcessStarter::getInstance($loop);
         foreach ($servicesConfig as $serviceConf) {
             try {
 
@@ -73,40 +83,41 @@ class Application implements \SplObserver, ConfigAwareInterface
                 $conf = new ServiceConfig(array_merge($serviceConf, ['amqp' => $amqpConf]));
                 $service = $this->initService($conf);
                 $service->startAsProcess();
-                $this->services[] = $service;
+                $this->services[$service->getPid()] = $service;
 
             }catch (ServiceException $ex){
                 $this->logger->error("Init service error: " . $ex->getMessage());
             }
         }
 
-        $loop = \React\EventLoop\Factory::create();
-        $app = $this;
 
-        $loop->addPeriodicTimer(5, function() use ($app, $loop){
-            try {
-                $this->logger->debug("Loop tick, count of services: " . count($app->services));
-                if ($app->isStoped) {
 
-                    $app->logger->info("Count of run services: " . count($this->services));
 
-                    /** @var ServiceInterface $service */
-                    foreach ($app->services as $service) {
-                        $res = $service->stop();
-                        if ($res) {
-                            $app->logger->info(sprintf("Service pid:%s %s succssfully stoped.", $service->getPid(), $service->getName()));
-                        } else {
-                            $app->logger->warning(sprintf("Service pid:%s %s isn't run", $service->getPid(), $service->getName()));
-                        }
-                    }
-                    $app->services = [];
-                    $app->logger->info("All services are stoped. Application exit...");
-                    $loop->stop();
-                }
-            }catch (\Exception $ex){
-                $app->logger->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
-            }
-        });
+
+//        $loop->addPeriodicTimer(5, function() use ($app, $loop){
+//            try {
+//                $this->logger->debug("Loop tick, count of services: " . count($app->services));
+//                if ($app->isStoped) {
+//
+//                    $app->logger->info("Count of run services: " . count($this->services));
+//
+//                    /** @var ServiceInterface $service */
+//                    foreach ($app->services as $service) {
+//                        $res = $service->stop();
+//                        if ($res) {
+//                            $app->logger->info(sprintf("Service pid:%s %s succssfully stoped.", $service->getPid(), $service->getName()));
+//                        } else {
+//                            $app->logger->warning(sprintf("Service pid:%s %s isn't run", $service->getPid(), $service->getName()));
+//                        }
+//                    }
+//                    $app->services = [];
+//                    $app->logger->info("All services are stoped. Application exit...");
+//                    $loop->stop();
+//                }
+//            }catch (\Exception $ex){
+//                $app->logger->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
+//            }
+//        });
         $loop->run();
     }
 
@@ -173,4 +184,13 @@ class Application implements \SplObserver, ConfigAwareInterface
     {
         $this->config = $config;
     }
+
+    /**
+     * @return null|LoopInterface
+     */
+    public function getLoop()
+    {
+        return $this->loop;
+    }
+
 }

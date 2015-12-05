@@ -1,6 +1,6 @@
 <?php
 /**
- * Created by PhpStorm.
+
  * User: a.itsekson
  * Date: 05.11.2015
  * Time: 13:37
@@ -10,14 +10,16 @@ namespace Icekson\WsAppServer\Messaging;
 
 
 
+use Bunny\Async\Client;
 use Icekson\WsAppServer\Service\Support\PubSubListenerInterface;
 use PhpAmqpLib\Channel\AMQPChannel;
+use PhpAmqpLib\Connection\AMQPConnection;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use Psr\Log\LoggerInterface;
 use Icekson\Utils\Logger;
 
-class AMQPPubSubConsumer
+class PubSubConsumer
 {
 
     /**
@@ -25,11 +27,13 @@ class AMQPPubSubConsumer
      */
     private $channel = null;
     /**
-     * @var null|AMQPStreamConnection
+     * @var null|AMQPConnection
      */
     private $connection = null;
-    private $callbackHost = '127.0.0.1';
-    private $callbackPort = 5555;
+    /**
+     * @var PubSubListenerInterface
+     */
+    private $listener = null;
     private $serviceName = 'main-service';
     private $exchangeName = 'pubsub';
     /**
@@ -50,7 +54,7 @@ class AMQPPubSubConsumer
      */
     public function __construct(array $config, PubSubListenerInterface $listener, $serviceName = 'main-service', $exchangeName = 'pubsub')
     {
-        $this->logger = Logger::createLogger(get_class($this), $config);
+        // $this->logger = Logger::createLogger(get_class($this), $config);
         $this->serviceName = $serviceName;
         $this->exchangeName = $exchangeName;
         $this->pubSubListener = $listener;
@@ -93,7 +97,7 @@ class AMQPPubSubConsumer
     public function consume()
     {
         $consumer = $this;
-        $this->logger->debug("pub sub consumer started");
+        //  $this->logger->debug("pub sub consumer started");
         $this->channel->basic_consume($this->exchangeName . "." . $this->serviceName, '', false, false, false, false, [$this, 'proccessMsg']);
         while (count($this->channel->callbacks)) {
             $this->channel->wait();
@@ -104,12 +108,12 @@ class AMQPPubSubConsumer
     {
         $consumer = $this;
         $routingKey = $msg->delivery_info['routing_key'];
-        $consumer->logger->info("new pubsub event consumed: " . $msg->body, ['delivery_info' => $msg->delivery_info]);
+        //  $consumer->logger->info("new pubsub event consumed: " . $msg->body, ['delivery_info' => $msg->delivery_info]);
         $message = '{"event": "' . $routingKey . '", "event_data": ' . $msg->body . '}';
         $socket = null;
         try {
             $this->pubSubListener->onPubSubMessage($message);
-            $this->logger->info("message to callback dsn is sent");
+            //  $this->logger->info("message to callback dsn is sent");
             $consumer->channel->basic_ack($msg->delivery_info['delivery_tag']);
         }catch (\Exception $ex){
             $consumer->channel->basic_nack($msg->delivery_info['delivery_tag']);

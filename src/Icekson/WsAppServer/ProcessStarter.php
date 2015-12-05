@@ -2,6 +2,9 @@
 
 namespace Icekson\WsAppServer;
 
+use React\EventLoop\Factory;
+use React\EventLoop\LoopInterface;
+use React\EventLoop\Timer\Timer;
 use SplObserver;
 use Icekson\WsAppServer\Exception\ThreadsException;
 use Symfony\Component\Process\Process;
@@ -25,20 +28,31 @@ class ProcessStarter implements \SplSubject
      */
     private $observers = null;
 
-    private function __construct()
+    /**
+     * @var null|LoopInterface
+     */
+    private $loop = null;
+
+    private function __construct(LoopInterface $loop = null)
     {
         $this->logger = Logger::createLogger(get_class($this));
         $this->observers = new \SplObjectStorage();
+        if ($loop !== null) {
+            $this->loop = $loop;
+        } else {
+            $this->loop = Factory::create();
+        }
 
     }
 
     /**
-     * @return null|self
+     * @param LoopInterface|null $loop
+     * @return ProcessStarter|null
      */
-    public static function getInstance()
+    public static function getInstance(LoopInterface $loop = null)
     {
         if (self::$instance === null) {
-            self::$instance = new self();
+            self::$instance = new self($loop);
         }
         return self::$instance;
     }
@@ -62,16 +76,37 @@ class ProcessStarter implements \SplSubject
             $this->getLogger()->debug("Process is found, try to stop...");
             $this->stop($cmd, $lines);
         }
-        $process = new Process($cmd);
-        $process->start();
-        sleep(1);
-        if ($process->isRunning()) {
-            $this->getLogger()->debug("Server started: pid - " . $process->getPid());
-            $pid = $process->getPid();
-        } else {
-            $this->getLogger()->warning($process->getErrorOutput());
-        }
 
+        // Start Chaild process
+
+        $process = new \React\ChildProcess\Process($cmd);
+        $process->on('exit', function($exitCode, $termSignal) use ($process, $cmd) {
+            $loop = $this->loop;
+            $logger = $this->getLogger();
+            if($termSignal != SIGKILL) {
+                $logger->warning("Child process is terminated cmd: {$cmd}, exitCode: '{$exitCode}', signal: '{$termSignal}'; restart...");
+                // if child process is terminated, restart it
+                $loop->addTimer(0.001, function (Timer $timer) use ($process, $logger) {
+                    $process->start($timer->getLoop());
+                    $process->stdout->on('data', function ($output) use ($logger) {
+                        // TODO: add some output handler
+                    });
+                });
+            }else{
+                $this->logger->warning("Child process is terminated with signal " . SIGKILL);
+            }
+        });
+
+        // Set output handler for child pubsub process
+        $this->loop->addTimer(0.001, function(Timer $timer) use ($process) {
+            $logger = $this->getLogger();
+            $process->start($timer->getLoop());
+            $process->stdout->on('data', function($output) use ($logger) {
+               // $logger->debug($output);
+            });
+        });
+
+        $pid = $process->getPid();
         $this->threads[$pid] = true;
         return $pid;
 
@@ -133,7 +168,7 @@ class ProcessStarter implements \SplSubject
     public function stopAllProcesses()
     {
         $this->isStoped = true;
-        foreach ($this->threads as $pid =>$v) {
+        foreach ($this->threads as $pid => $v) {
             $this->stopProcess($pid);
         }
     }
