@@ -4,17 +4,18 @@
  * @createdAt: 20.11.2015 10:56
  */
 
-namespace Icekson\WsAppServer\Queue;
+namespace Icekson\WsAppServer\Jobs;
 
 
 use Icekson\Utils\IArrayExchange;
+use Icekson\WsAppServer\Jobs\Amqp\ChainQueue;
 use Traversable;
 
 class TaskChain implements QueueInterface, DelayedQueueInterface, PushableInterface, \IteratorAggregate, IArrayExchange
 {
 
     /**
-     * @var AMQPChainQueue|null
+     * @var ChainQueue|null
      */
     private $queue = null;
     /**

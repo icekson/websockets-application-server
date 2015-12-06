@@ -8,9 +8,12 @@ namespace Icekson\WsAppServer\Service;
 
 use Icekson\WsAppServer\Application;
 use Icekson\WsAppServer\Config\ServiceConfig;
+use Icekson\WsAppServer\Jobs\Amqp\Worker;
+
 
 class JobsService extends AbstractService
 {
+    private $routingKey = "#";
 
     public function __construct(Application $app, ServiceConfig $config)
     {
@@ -19,7 +22,21 @@ class JobsService extends AbstractService
 
     public function getRunCmd()
     {
-        return sprintf("%s scripts/runner.php app:service --type=job --name='%s'", $this->getConfiguration()->get("php_path"), $this->getName());
+        return sprintf("%s scripts/runner.php app:service --type=job --name='%s' --routing-key=%s", $this->getConfiguration()->get("php_path"), $this->getName(), $this->getConfiguration()->get("routing_key"));
+    }
+
+    public function setRoutingKey($routingKey)
+    {
+        $this->routingKey = $routingKey;
+    }
+
+    public function run()
+    {
+
+        $key = $this->routingKey;
+        $config = $this->getConfiguration();
+        $worker = new Worker($config, $key . "-jobs");
+        $worker->consume($key);
     }
 
 

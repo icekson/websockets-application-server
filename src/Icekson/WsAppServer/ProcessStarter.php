@@ -6,7 +6,6 @@ use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\Timer\Timer;
 use SplObserver;
-use Icekson\WsAppServer\Exception\ThreadsException;
 use Symfony\Component\Process\Process;
 use Icekson\Utils\Logger;
 
@@ -103,6 +102,7 @@ class ProcessStarter implements \SplSubject
             }else{
                 $this->logger->warning("Child process is terminated with signal " . SIGKILL);
             }
+            $this->notify();
         });
 
         // Set output handler for child pubsub process

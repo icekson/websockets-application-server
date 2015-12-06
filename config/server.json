@@ -29,6 +29,13 @@
         "host": "195.184.70.228",
         "port": 5110
       },
+      "connector-server-3": {
+        "php_path": "php7",
+        "name": "connector-server-3",
+        "class": "Icekson\\WsAppServer\\Service\\ConnectorService",
+        "host": "195.184.70.228",
+        "port": 5120
+      },
       "backend-server-1": {
         "php_path": "php7",
         "name": "backend-server-1",
@@ -39,10 +46,11 @@
         "name": "backend-server-2",
         "class": "Icekson\\WsAppServer\\Service\\BackendEchoService"
       },
-      "backend-server-3": {
+      "jobs-server-1": {
         "php_path": "php7",
-        "name": "backend-server-3",
-        "class": "Icekson\\WsAppServer\\Service\\BackendEchoService"
+        "name": "jobs-server-1",
+        "class": "Icekson\\WsAppServer\\Service\\JobsService",
+        "routing_key": "match"
       }
     }
   }

@@ -4,7 +4,7 @@
  * @createdAt: 20.11.2015 10:51
  */
 
-namespace Icekson\WsAppServer\Queue;
+namespace Icekson\WsAppServer\Jobs;
 
 
 interface DelayedQueueInterface

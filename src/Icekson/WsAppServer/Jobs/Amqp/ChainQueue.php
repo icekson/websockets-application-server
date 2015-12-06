@@ -4,13 +4,17 @@
  * @createdAt: 06.11.2015 15:21
  */
 
-namespace Icekson\WsAppServer\Queue;
+namespace Icekson\WsAppServer\Jobs\Amqp;
 
 
 use Icekson\Utils\Logger;
+use Icekson\WsAppServer\Jobs\DelayedQueueInterface;
+use Icekson\WsAppServer\Jobs\JobInterface;
+use Icekson\WsAppServer\Jobs\QueueInterface;
+use Icekson\WsAppServer\Jobs\TaskChain;
 use Psr\Log\LoggerInterface;
 
-class AMQPChainQueue implements QueueInterface, DelayedQueueInterface
+class ChainQueue implements QueueInterface, DelayedQueueInterface
 {
 
      /**
@@ -77,10 +81,10 @@ class AMQPChainQueue implements QueueInterface, DelayedQueueInterface
 
 
         if($firstTask['isDelayed']){
-            $queue = new AMQPDelayedQueue($this->config);
+            $queue = new DelayedQueue($this->config);
             $queue->enqueueIn($firstTask['delay'], $firstTask['task'], $params, $firstTask['routingKey']);
         }else{
-            $queue = new AMQPQueue($this->config);
+            $queue = new Queue($this->config);
             $queue->enqueue($firstTask['task'], $params, $firstTask['routingKey']);
         }
 

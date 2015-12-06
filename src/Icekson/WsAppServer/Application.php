@@ -13,6 +13,7 @@ use Icekson\WsAppServer\Config\ApplicationConfig;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
 use Icekson\WsAppServer\LoadBalancer\Balancer;
+use Icekson\WsAppServer\Service\JobsService;
 use React\EventLoop\LibEventLoop;
 use Icekson\Utils\Logger;
 
@@ -124,11 +125,12 @@ class Application implements \SplObserver, ConfigAwareInterface
     }
 
     /**
-     * @param $type
      * @param $name
+     * @param $type
+     * @param null $routingKey
      * @throws ServiceException
      */
-    public function runService($name, $type)
+    public function runService($name, $type, $routingKey = null)
     {
         $services = $this->getConfiguration()->get("services");
         $serviceConfig = isset($services[$name]) ? $services[$name] : [];
@@ -137,6 +139,9 @@ class Application implements \SplObserver, ConfigAwareInterface
             throw new ServiceException("Service with name '$name' is not found");
         }
         $service = $this->initService(new ServiceConfig(array_merge($serviceConfig, ["amqp" => $this->getConfiguration()->get("amqp", [])])));
+        if($service instanceof JobsService){
+            $service->setRoutingKey($routingKey);
+        }
         $service->start();
 
     }

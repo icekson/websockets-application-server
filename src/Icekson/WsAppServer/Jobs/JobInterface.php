@@ -4,7 +4,7 @@
  * @createdAt: 07.11.2015 15:41
  */
 
-namespace Icekson\WsAppServer\Queue;
+namespace Icekson\WsAppServer\Jobs;
 
 
 interface JobInterface

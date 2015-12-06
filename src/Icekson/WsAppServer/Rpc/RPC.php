@@ -49,7 +49,7 @@ class RPC
         }else{
             $exchangeName = "rpc-response";
             //$queueName = "rpc-response.{$serviceName}";
-            $this->queue = new ResponseQueue($config, $exchangeName, $queueName);
+            $this->queue = new ResponseQueue($config, $exchangeName);
             $this->consumer = new RequestConsumer($config, $loop, $respHandler, $serviceName);
         }
 

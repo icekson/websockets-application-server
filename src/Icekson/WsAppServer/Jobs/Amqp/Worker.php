@@ -1,24 +1,25 @@
 <?php
 /**
- * @author a.itsekson
- * @createdAt: 06.11.2015 15:21
+ *
+ * @author: a.itsekson
+ * @date: 06.12.2015 23:09
  */
 
-namespace Icekson\WsAppServer\Queue;
+namespace Icekson\WsAppServer\Jobs\Amqp;
 
 
 use Icekson\Utils\Logger;
-use Icekson\Utils\ParamsBag;
-
 use Icekson\WsAppServer\Config\ConfigAdapter;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
+use Icekson\WsAppServer\Jobs\JobInterface;
+use Icekson\WsAppServer\Jobs\TaskChain;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use Psr\Log\LoggerInterface;
 
-class AMQPQueueWorker
+class Worker implements ConfigAwareInterface
 {
     /**
      * @var null|AMQPStreamConnection
@@ -33,7 +34,7 @@ class AMQPQueueWorker
     private $queueName = '';
     private $exchangeName = '';
 
-     /**
+    /**
      * @var null|LoggerInterface
      */
     private $logger = null;
@@ -44,21 +45,21 @@ class AMQPQueueWorker
     private $config = null;
 
     /**
-     * AMQPQueueWorker constructor.
-     * @param array $config
+     * Worker constructor.
+     * @param ConfigureInterface $config
      * @param null $queue
      * @param null $exchangeName
      */
-    public function __construct(array $config, $queue = null, $exchangeName = null)
+    public function __construct(ConfigureInterface $config, $queue = null, $exchangeName = null)
     {
-
-        $this->logger = Logger::createLogger(get_class($this), $config);
-        $this->config = new ConfigAdapter($config);
+        $this->logger = Logger::createLogger(get_class($this), $config->toArray());
+        $this->config = $config;
+        $config = $config->toArray();
         if($exchangeName === null){
             $exchangeName = 'jobs';
         }
         if($queue === null){
-            $queue = 'match-jobs';
+            $queue = 'im-jobs';
         }
         $this->queueName = $queue;
         $this->exchangeName = $exchangeName;
@@ -73,6 +74,9 @@ class AMQPQueueWorker
 
     }
 
+    /**
+     * @param string $routingKey
+     */
     private function initConnection($routingKey = "#")
     {
         if(!$this->connection->isConnected()){
@@ -98,7 +102,7 @@ class AMQPQueueWorker
     public function consume($routingKey)
     {
         $this->initConnection($routingKey);
-        $this->channel->basic_consume($this->queueName, '', false, false, false, false, [$this, 'proccessMsg']);
+        $this->channel->basic_consume($this->queueName, '', false, false, false, false, [$this, 'processMsg']);
         $this->logger->info("Jobs consume for routing-key: {$routingKey} started...");
         while (count($this->channel->callbacks)) {
             $this->channel->wait();
@@ -108,7 +112,7 @@ class AMQPQueueWorker
     /**
      * @param AMQPMessage $msg
      */
-    public function proccessMsg(AMQPMessage $msg)
+    public function processMsg(AMQPMessage $msg)
     {
         try {
             $consumer = $this;
@@ -130,7 +134,7 @@ class AMQPQueueWorker
                     call_user_func([$task, 'perform'], $params);
                     $chain = isset($params['chain']) ? $params['chain'] : [];
                     if(count($chain) > 0){
-                        $queue = new AMQPChainQueue($this->config->toArray());
+                        $queue = new ChainQueue($this->config->toArray());
                         $chainTask = new TaskChain($queue);
                         $this->logger->debug("Chain of tasks: ", $chain);
                         $chainTask->fromArray($chain);
@@ -140,15 +144,31 @@ class AMQPQueueWorker
                     $consumer->channel->basic_ack($msg->delivery_info['delivery_tag']);
 
                 }else{
-                    $this->logger->warning("Task is not instance of Application\\QueueJob\\JobInterface");
+                    $this->logger->warning("Task is not instance of JobInterface");
                     $consumer->channel->basic_nack($msg->delivery_info['delivery_tag']);
                 }
             }
-        }catch(\Exception $ex){
+        }catch(\Throwable $ex){
             $this->channel->basic_nack($msg->delivery_info['delivery_tag']);
             $this->logger->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
         }
 
     }
 
+
+    /**
+     * @return ConfigureInterface|ConfigAdapter
+     */
+    public function getConfiguration()
+    {
+        return $this->config;
+    }
+
+    /**
+     * @param ConfigureInterface $config
+     */
+    public function setConfiguration(ConfigureInterface $config)
+    {
+        $this->config = $config;
+    }
 }

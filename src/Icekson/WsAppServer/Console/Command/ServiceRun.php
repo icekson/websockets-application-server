@@ -32,6 +32,13 @@ class ServiceRun extends BaseCommand
                 null
             )
             ->addOption(
+                'routing-key',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Routing key for jobs service',
+                "#"
+            )
+            ->addOption(
                 'name',
                 null,
                 InputOption::VALUE_REQUIRED,
@@ -48,11 +55,12 @@ class ServiceRun extends BaseCommand
         $this->logger()->debug("options : " . var_export($input->getOptions(), true));
         $name = $input->getOption('name');
         $type = $input->getOption('type');
+        $routingKey = $input->getOption('routing-key');
         $configPath = PATH_ROOT . "config/server.json";
         $appConf = new ApplicationConfig($configPath);
 
         $app = new Application($appConf);
-        $app->runService($name, $type);
+        $app->runService($name, $type, $routingKey);
 
         $executionTime = gmdate("H:i:s", time() - $start);
         $this->logger()->debug("Finish [" . gmdate("Y-m-d H:i:s") . ']');
