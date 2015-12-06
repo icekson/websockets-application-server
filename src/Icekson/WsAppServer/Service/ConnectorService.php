@@ -9,6 +9,7 @@ namespace Icekson\WsAppServer\Service;
 use Icekson\WsAppServer\Application;
 use Icekson\WsAppServer\Config\ServiceConfig;
 
+use Icekson\WsAppServer\LoadBalancer\Balancer;
 use Icekson\WsAppServer\Messaging\AmqpAsync\PubSubConsumer;
 use Icekson\WsAppServer\Rpc\RPC;
 use Icekson\WsAppServer\Messaging\Websocket\ConnectorHandler;
@@ -49,6 +50,7 @@ class ConnectorService extends AbstractService
             ),
             $webSock
         );
+        Balancer::getInstance()->registerConnector($this->getConfiguration());
         $loop->run();
     }
 

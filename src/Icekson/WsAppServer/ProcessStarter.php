@@ -12,6 +12,9 @@ use Icekson\Utils\Logger;
 
 class ProcessStarter implements \SplSubject
 {
+    private $restartLimit = 10;
+
+    private $limitCounters = [];
 
     private static $instance = null;
 
@@ -83,15 +86,20 @@ class ProcessStarter implements \SplSubject
         $process->on('exit', function($exitCode, $termSignal) use ($process, $cmd) {
             $loop = $this->loop;
             $logger = $this->getLogger();
-            if($termSignal != SIGKILL) {
+            $limit = isset($this->limitCounters[$cmd]) ? $this->limitCounters[$cmd] : 0;
+            if($termSignal != SIGKILL && $limit <= $this->restartLimit) {
                 $logger->warning("Child process is terminated cmd: {$cmd}, exitCode: '{$exitCode}', signal: '{$termSignal}'; restart...");
                 // if child process is terminated, restart it
                 $loop->addTimer(0.001, function (Timer $timer) use ($process, $logger) {
                     $process->start($timer->getLoop());
                     $process->stdout->on('data', function ($output) use ($logger) {
-                        // TODO: add some output handler
+                        echo $output;
                     });
                 });
+                if(!isset($this->limitCounters[$cmd])){
+                    $this->limitCounters[$cmd] = 0;
+                }
+                $this->limitCounters[$cmd]++;
             }else{
                 $this->logger->warning("Child process is terminated with signal " . SIGKILL);
             }
@@ -102,7 +110,7 @@ class ProcessStarter implements \SplSubject
             $logger = $this->getLogger();
             $process->start($timer->getLoop());
             $process->stdout->on('data', function($output) use ($logger) {
-               // $logger->debug($output);
+                echo $output;
             });
         });
 

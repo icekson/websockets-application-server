@@ -19,6 +19,7 @@ use Icekson\WsAppServer\Config\ConfigAdapter;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
+use Icekson\WsAppServer\LoadBalancer\Balancer;
 use Icekson\WsAppServer\Messaging\Amqp\PubSub as AMQPPubSub;
 
 
@@ -155,21 +156,11 @@ class GateHandler implements MessageComponentInterface, ConfigAwareInterface
 
             switch ($operation) {
                 case 'init' :
-                    // TODO: add init logic
-                    $conf = new ConfigAdapter(PATH_ROOT . "config/server.json");
-                    $c = $conf->get("ws-server", []);
-                    $c = new ApplicationConfig($c);
-                    $services = $c->getServicesConfig();
-                    $res = null;
-                    foreach ($services as $service) {
-                        $serviceConf = new ServiceConfig($service);
-                        $this->logger()->alert($serviceConf->getName());
-                        if(preg_match("/.*connector.*/", $serviceConf->getName())){
-                            $res = $serviceConf;
-                            break;
-                        }
-                    }
-
+                    $res = Balancer::getInstance()->getConnector();
+//                    foreach (Balancer::getInstance()->getAvalableConnectors() as $avalableConnector) {
+//                        $res[] = $avalableConnector->getName();
+//                    }
+                   // $responseBuilder->setData($res);
                     $responseBuilder->setData(["host" => $res->getHost(), "port" => $res->getPort(), "connector" => $res->getName()]);
 
                     break;

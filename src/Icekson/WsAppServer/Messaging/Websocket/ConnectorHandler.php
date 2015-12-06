@@ -16,6 +16,7 @@ use Api\Service\Util\Properties;
 use Icekson\Utils\Logger;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
+use Icekson\WsAppServer\LoadBalancer\Balancer;
 use Icekson\WsAppServer\Messaging\Amqp\PubSub as AMQPPubSub;
 
 
@@ -99,8 +100,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
 
         $this->pubSub = new AMQPPubSub($config->toArray(), $this->getName());
         $this->rpcQueue = new \ArrayObject();
-        $this->rpc = new RPC(RPC::TYPE_REQUEST, $loop, $this, $config->get("name"), $this->getConfiguration()->toArray());;
-
+        $this->rpc = new RPC(RPC::TYPE_REQUEST, $loop, $this, $config->get("name"), $this->getConfiguration()->toArray());
     }
 
 
@@ -117,6 +117,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     public function onOpen(ConnectionInterface $conn)
     {
         $this->clients->attach($conn);
+        Balancer::getInstance()->attachConnection($this->getName());
         $this->logger()->info("new connection $conn->resourceId ({$conn->remoteAddress}) : " . $this->clients->count() . " connected");
 
     }
@@ -132,6 +133,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         if (isset($this->users[$conn->resourceId])) {
             unset($this->users[$conn->resourceId]);
         }
+        Balancer::getInstance()->detachConnection($this->getName());
         $this->logger()->info("close connection $conn->resourceId ({$conn->remoteAddress}):  " . $this->clients->count() . " connected");
 
         if(isset($this->subscriptions[$conn->resourceId])){

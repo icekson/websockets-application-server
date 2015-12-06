@@ -12,6 +12,7 @@ use Icekson\Utils\Registry;
 use Icekson\WsAppServer\Config\ApplicationConfig;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
+use Icekson\WsAppServer\LoadBalancer\Balancer;
 use React\EventLoop\LibEventLoop;
 use Icekson\Utils\Logger;
 
@@ -76,6 +77,7 @@ class Application implements \SplObserver, ConfigAwareInterface
         $loop = $this->loop;
         $this->loop = $loop;
         ProcessStarter::getInstance($loop);
+        Balancer::getInstance()->reset();
         foreach ($servicesConfig as $serviceConf) {
             try {
 
