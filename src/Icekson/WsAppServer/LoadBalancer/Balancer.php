@@ -88,27 +88,20 @@ class Balancer
     public function getConnector()
     {
         $services = $this->storage->retrieveAvailableConnectors();
-        $counts = [];
-        foreach ($services as $service) {
-            $counts[$service->getName()] = [
-                'name' => $service->getName(),
-                'count' => $this->storage->geCountOfConnections($service->getName())
-            ];
-        }
 
-        if(count($counts) == 0){
-            throw new ServiceException("There is no available connectors are found");
-        }
-        usort($counts, function($a, $b){
-            if($a['count'] > $b['count']){
+        usort($services, function($a, $b){
+            if($a->get('connections') > $b->get('connections')){
                 return 1;
-            }else if($a['count'] < $b['count']){
+            }else if($a->get('connections') < $b->get('connections')){
                 return -1;
             }else{
                 return 0;
             }
         });
-        return $services[$counts[0]['name']];
+        if(count($services) === 0){
+            throw new ServiceException("there is no available connectors");
+        }
+        return array_shift($services);
 
     }
 

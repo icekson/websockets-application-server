@@ -30,6 +30,7 @@ use Psr\Log\LoggerInterface;
 use Ratchet\ConnectionInterface;
 use Api\Service\Response\JsonBuilder as JsonResponseBuilder;
 
+use Ratchet\WebSocket\Version\RFC6455\Frame;
 use React\EventLoop\LoopInterface;
 use Ratchet\MessageComponentInterface;
 use Api\Service\IdentityFinderInterface;
@@ -192,14 +193,11 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
 
         try {
 
-//            $identity = $this->getIdentity(new Properties($this->request->params()->toArray()));
-//            if (empty($identity) || $identity->getId() === null) {
-//                throw new BadTokenException("Bad token is given");
-//            }
-//            $this->users[$from->resourceId] = $identity;
-//            foreach ($this->internalClients as $client) {
-//                $client->init($this, $identity);
-//            }
+            $identity = $this->getIdentity(new Properties($this->request->params()->toArray()));
+            if (empty($identity) || $identity->getId() === null) {
+                throw new BadTokenException("Bad token is given");
+            }
+            $this->users[$from->resourceId] = $identity;
 
             $this->logger()->info("new incomming message ({$from->resourceId} ({$from->remoteAddress}:".($identity ? $identity->getId() : "empty")."))" . "; message: " . $msg);
 
@@ -265,12 +263,12 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         } catch (NoTokenException $ex) {
             $responseBuilder->setStatusCode(Builder::STATUS_CODE_BAD_TOKEN);
             $responseBuilder->setError($ex->getMessage());
-            $this->logger()->warning('exception:' . $ex->getMessage());
+            $this->logger()->warning($ex->getMessage());
             $from->send($responseBuilder->result());
         } catch (BadTokenException $ex) {
             $responseBuilder->setStatusCode(Builder::STATUS_CODE_BAD_TOKEN);
             $responseBuilder->setError($ex->getMessage());
-            $this->logger()->warning('exception:' . $ex->getMessage());
+            $this->logger()->warning("Bad token is given: " . $this->request->params()->get('token'));
             $from->send($responseBuilder->result());
         } catch (\InvalidArgumentException $ex){
             $responseBuilder->setStatusCode(Builder::STATUS_CODE_ERROR);
@@ -354,6 +352,19 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     public function getConnectionsPool()
     {
         return $this->clients;
+    }
+
+    /**
+     *
+     */
+    public function pingConnections()
+    {
+        $this->logger()->debug("ping connections, " . count($this->getConnectionsPool()) . " active connections");
+        /** @var ConnectionInterface $conn */
+        foreach ($this->getConnectionsPool() as $conn) {
+            $msg = new Frame(0, true, Frame::OP_PING);
+            $conn->send($msg);
+        }
     }
 
 

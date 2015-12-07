@@ -6,6 +6,8 @@
 
 namespace Icekson\WsAppServer\Service;
 
+use Api\Service\IdentityFinderInterface;
+use Icekson\Base\Auth\EmptyIdentityFinder;
 use Icekson\WsAppServer\Application;
 use Icekson\WsAppServer\Config\ServiceConfig;
 
@@ -35,10 +37,20 @@ class ConnectorService extends AbstractService
 
     public function run()
     {
+        $identityFinderClass = $this->getConfiguration()->get("identity_finder_class", "Icekson\\Base\\Auth\\EmptyIdentityFinder");
         $loop = $this->getLoop();
         $handler = new ConnectorHandler($this->getConfiguration()->getName(), $loop, $this->getConfiguration());
+        $iFinder = new $identityFinderClass();
+        if(!$iFinder instanceof IdentityFinderInterface){
+            $iFinder = new EmptyIdentityFinder();
+        }
+        $handler->setIdentityFinder($iFinder);
         $this->pubsubConsumer = new PubSubConsumer($this->getConfiguration()->toArray(), $loop, $handler, $this->getName());
         $this->pubsubConsumer->consume();
+
+        $loop->addPeriodicTimer(5*60, function() use($handler) {
+            $handler->pingConnections();
+        });
 
         $webSock = new \React\Socket\Server($loop);
         $webSock->listen($this->getConfiguration()->getPort(), '0.0.0.0');

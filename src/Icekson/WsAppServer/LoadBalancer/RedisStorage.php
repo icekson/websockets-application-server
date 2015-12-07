@@ -20,8 +20,8 @@ class RedisStorage implements StorageInterface
 
     public function __construct(ConfigureInterface $config)
     {
-        $host = $config->get("host","127.0.0.1");
-        $port = $config->get("port",6379);
+        $host = $config->get("host", "127.0.0.1");
+        $port = $config->get("port", 6379);
         $this->redis = new Client("tcp://{$host}:{$port}", ['prefix' => 'ws-app.load-balancer']);
     }
 
@@ -32,11 +32,33 @@ class RedisStorage implements StorageInterface
      */
     public function geCountOfConnections($serviceName)
     {
-        $count = $this->redis->get("service.{$serviceName}.connections");
-        if($count === null){
+        $info = $this->getServicesInfo();
+        if (!isset($info[$serviceName])) {
             throw new StorageException("there is no registered service '{$serviceName}'");
+        } else {
+            $serviceInfo = $info[$serviceName];
+            $count = isset($serviceInfo['connections']) ? $serviceInfo['connections'] : 0;
         }
         return $count;
+    }
+
+    private function getServicesInfo()
+    {
+        $info = $this->redis->get("services.info");
+        $info = @unserialize($info);
+        if (empty($info)) {
+            $info = [];
+        }
+        return $info;
+    }
+
+    private function saveServicesInfo($info)
+    {
+        if(empty($info)){
+            $info = [];
+        }
+        $d = @serialize($info);
+        $this->redis->set("services.info", $d);
     }
 
     /**
@@ -46,11 +68,18 @@ class RedisStorage implements StorageInterface
      */
     public function incrementCounter($serviceName)
     {
-        $count = $this->redis->get("service.{$serviceName}.connections");
-        if($count === null){
-            throw new StorageException("there is no registered service '{$serviceName}'");
+        $info = $this->getServicesInfo();
+        $serviceInfo = [];
+        $count = 0;
+        if (isset($info[$serviceName])) {
+            $serviceInfo = $info[$serviceName];
+            $count = isset($serviceInfo['connections']) ? $serviceInfo['connections'] : 0;
         }
-        $this->redis->set("service.{$serviceName}.connections", ++$count);
+
+        $count++;
+        $serviceInfo['connections'] = $count;
+        $info[$serviceName] = $serviceInfo;
+        $this->saveServicesInfo($info);
         return $this;
     }
 
@@ -61,15 +90,20 @@ class RedisStorage implements StorageInterface
      */
     public function decrementCounter($serviceName)
     {
-        $count = $this->redis->get("service.{$serviceName}.connections");
-        if($count === null){
-            throw new StorageException("there is no registered service '{$serviceName}'");
+        $info = $this->getServicesInfo();
+        $serviceInfo = [];
+        $count = 0;
+        if (isset($info[$serviceName])) {
+            $serviceInfo = $info[$serviceName];
+            $count = isset($serviceInfo['connections']) ? $serviceInfo['connections'] : 0;
         }
-        if($count > 0){
+
+        if($count > 0) {
             $count--;
         }
-        $this->redis->set("service.{$serviceName}.connections", $count);
-
+        $serviceInfo['connections'] = $count;
+        $info[$serviceName] = $serviceInfo;
+        $this->saveServicesInfo($info);
         return $this;
     }
 
@@ -79,13 +113,15 @@ class RedisStorage implements StorageInterface
      */
     public function persistAvailableConnectors(array $services)
     {
-        $tmp = serialize($services);
-        $this->redis->set("services", $tmp);
+        $info = $this->getServicesInfo();
+
         foreach ($services as $service) {
-            if(!$this->redis->get("service.{$service->getName()}.connections")) {
-                $this->redis->set("service.{$service->getName()}.connections", 0);
-            }
+            $info[$service->getName()] = array_merge([
+                'connections' => 0,
+            ], $service->toArray());
         }
+        $this->saveServicesInfo($info);
+
         return $this;
     }
 
@@ -94,22 +130,18 @@ class RedisStorage implements StorageInterface
      */
     public function retrieveAvailableConnectors()
     {
-        $tmp = $this->redis->get("services");
-        $services = @unserialize($tmp);
-        if(empty($services)){
-            $services = [];
+        $info = $this->getServicesInfo();
+        $res = [];
+        foreach ($info as $item) {
+            $res[] = new ServiceConfig($item);
         }
-        return $services;
+        return $res;
     }
 
     public function reset()
     {
-        $this->redis->del([
-            "services",
-            "service.connector-server-1.connections",
-            "service.connector-server-2.connections",
-            "service.connector-server-3.connections",
-        ]);
+        $info = [];
+        $this->saveServicesInfo($info);
     }
 
 }
