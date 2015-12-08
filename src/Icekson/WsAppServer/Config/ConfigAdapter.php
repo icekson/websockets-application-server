@@ -46,8 +46,15 @@ class ConfigAdapter  implements ConfigureInterface
                 default:
                     throw new Exception\UnsupportedFormatException("Unsupported config file format");
             }
+            $localConfigFile = $pathInfo['dirname'] . "/" . $pathInfo['basename'] . ".local.".$pathInfo['extension'];
+            if(file_exists($localConfigFile)){
+                $localConf = $parser->parse($localConfigFile);
+            }else{
+                $localConf = [];
+            }
+
             $conf = $parser->parse($config);
-            $config = $conf;
+            $config = array_merge($conf, $localConf);
         }
         if ($index !== null && isset($config[$index])) {
             $config = $config[$index];
