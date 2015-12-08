@@ -1,4 +1,15 @@
 {
+    "name": "icekson/ws-app-server", 
+    "description": "Scalable websocket server",
+    "license": "MIT",
+    "type": "library",
+    "minimum-stability": "dev",
+    "authors": [
+        {
+            "name": "Alexey Itsekson",
+            "email": "icekson85@gmail.com"
+        }
+    ],
     "require": {
         "react/react": "^0.4.2",
         "videlalvaro/php-amqplib": "^2.6",
@@ -12,21 +23,19 @@
         "predis/predis": "1.0.x-dev"
 
     },
-    "autoload" : {
-        "psr-4" : {
-            "Icekson\\" : "src\\Icekson",
-            "IceksonTest\\" : "tests\\Icekson",
-            "Messaging\\": "lib\\Messaging"
-        }
-    },
-    "repositories": [
-        {
-            "type": "git",
-            "url": "https://bitbucket.org/icekson/remote-services.git"
-        }
-    ],
     "require-dev": {
         "phpunit/phpunit" : "5.0.2",
         "phpunit/phpunit-mock-objects" : "*"
+    }
+    "autoload" : {
+        "psr-4" : {
+            "Icekson\\" : "src\\Icekson",
+            "IceksonTest\\" : "tests\\Icekson"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0.x-dev"
+        }
     }
 }
