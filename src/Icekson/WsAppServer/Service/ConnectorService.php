@@ -9,6 +9,7 @@ namespace Icekson\WsAppServer\Service;
 use Api\Service\IdentityFinderInterface;
 use Icekson\Base\Auth\EmptyIdentityFinder;
 use Icekson\WsAppServer\Application;
+use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
 
 use Icekson\WsAppServer\LoadBalancer\Balancer;
@@ -32,7 +33,7 @@ class ConnectorService extends AbstractService
 
     public function getRunCmd()
     {
-        return sprintf("%s scripts/runner.php app:service --type=connector --name='%s'", $this->getConfiguration()->get("php_path"), $this->getName());
+        return sprintf("%s scripts/runner.php app:service --type=connector --name='%s' --config-path='%s'", $this->getConfiguration()->get("php_path"), $this->getName(), $this->getConfigPath());
     }
 
     public function run()
@@ -43,6 +44,9 @@ class ConnectorService extends AbstractService
         $iFinder = new $identityFinderClass();
         if(!$iFinder instanceof IdentityFinderInterface){
             $iFinder = new EmptyIdentityFinder();
+        }
+        if($iFinder instanceof ConfigAwareInterface){
+            $iFinder->setConfiguration($this->getConfiguration());
         }
         $handler->setIdentityFinder($iFinder);
         $this->pubsubConsumer = new PubSubConsumer($this->getConfiguration()->toArray(), $loop, $handler, $this->getName());

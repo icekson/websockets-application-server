@@ -8,18 +8,22 @@
 namespace Icekson\WsAppServer\Service;
 
 
+use Icekson\Utils\ParamsBag;
 use Icekson\WsAppServer\Application;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ConfigureInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Icekson\WsAppServer\Exception\ServiceException;
 use Icekson\Utils\Logger;
+use Icekson\WsAppServer\Messaging\Amqp\PubSub;
+use Icekson\WsAppServer\Messaging\PubSub\PubSubAwareInterface;
+use Icekson\WsAppServer\Messaging\PubSub\PubSubInterface;
 use Icekson\WsAppServer\ProcessStarter;
 
 use React\EventLoop\LoopInterface;
 use Symfony\Component\Process\Process;
 
-abstract class AbstractService  implements ServiceInterface, ConfigAwareInterface
+abstract class AbstractService implements ServiceInterface, ConfigAwareInterface, PubSubAwareInterface
 {
 
     /**
@@ -53,6 +57,11 @@ abstract class AbstractService  implements ServiceInterface, ConfigAwareInterfac
      */
     protected $app = null;
 
+    /**
+     * @var null|PubSubInterface
+     */
+    protected $pubSub = null;
+
 
     /**
      * AbtractService constructor.
@@ -64,7 +73,20 @@ abstract class AbstractService  implements ServiceInterface, ConfigAwareInterfac
         $this->name = $name;
         $this->config = $conf;
         $this->app = $app;
+        $this->pubSub = new PubSub($this->getConfiguration()->toArray(), $this->getName());
 
+    }
+
+    /**
+     * @return string
+     */
+    protected function getConfigPath()
+    {
+        if (defined("CONFIG_PATH")) {
+            return CONFIG_PATH;
+        } else {
+            return "./config/server.json";
+        }
     }
 
     /**
@@ -85,10 +107,10 @@ abstract class AbstractService  implements ServiceInterface, ConfigAwareInterfac
 
     public function start()
     {
-        try{
+        try {
             $this->isRun = true;
             $this->run();
-        }catch (\Throwable $ex){
+        } catch (\Throwable $ex) {
             $this->getLogger()->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
             $this->isRun = false;
         }
@@ -131,11 +153,12 @@ abstract class AbstractService  implements ServiceInterface, ConfigAwareInterfac
      */
     protected function getLogger()
     {
-        return $this->logger = Logger::createLogger(get_class($this) . ":". $this->name, $this->getConfiguration()->toArray());
+        return $this->logger = Logger::createLogger(get_class($this) . ":" . $this->name, $this->getConfiguration()->toArray());
     }
 
 
-    public function run(){
+    public function run()
+    {
         throw new ServiceException("You should implement method run");
     }
 
@@ -161,5 +184,29 @@ abstract class AbstractService  implements ServiceInterface, ConfigAwareInterfac
     abstract public function getRunCmd();
 
 
+    /**
+     * @return PubSubInterface|null
+     */
+    public function getPubSub()
+    {
+        return $this->pubSub;
+    }
 
+    /**
+     * @param PubSubInterface $pubSub
+     */
+    public function setPubSub(PubSubInterface $pubSub)
+    {
+        $this->pubSub = $pubSub;
+    }
+
+    /**
+     * @param $eventName
+     * @param array $data
+     * @return mixed
+     */
+    public function publishEvent($eventName, array $data)
+    {
+        return $this->pubSub->publish($eventName, get_class($this), new ParamsBag($data));
+    }
 }

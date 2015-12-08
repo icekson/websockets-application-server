@@ -323,7 +323,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     private function logger()
     {
         if($this->_logger === null) {
-           $this->_logger = Logger::createLogger( get_class($this). ":" .$this->getName() , $this->config->toArray());
+            $this->_logger = Logger::createLogger( get_class($this). ":" .$this->getName() , $this->config->toArray());
         }
         return $this->_logger;
     }
@@ -410,7 +410,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $cons = $this->findConnectionsByRequestId($resp->getRequestId());
         $this->logger()->info("on rpc response: found connections: " . count($cons));
         foreach ($cons as $conn) {
-            $conn->send($resp->serialize());
+            $conn->send($resp->serializeToClientFormat());
             $this->logger()->info("on rpc response: send resp to client: " . $conn->resourceId);
             if(isset($this->rpcQueue[$conn->resourceId])){
                 $index = array_search($resp->getRequestId(), $this->rpcQueue[$conn->resourceId]);

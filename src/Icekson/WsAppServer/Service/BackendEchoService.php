@@ -32,7 +32,12 @@ class BackendEchoService extends BackendService implements RequestHandlerInterfa
     public function onRequest(RequestInterface $req)
     {
         $this->getLogger()->debug("onRequest" . $req->serialize());
-        $this->rpc->sendResponse($req->getRequestId(), $req->getReplyTo(), ["resp" => uniqid(), "backend-service" => $this->getName()]);
-
     }
+
+    public function dispatch(RequestInterface $req)
+    {
+        $this->rpc->sendResponse($req->getRequestId(), $req->getReplyTo(), ["resp" => uniqid(), "backend-service" => $this->getName()]);
+    }
+
+
 }

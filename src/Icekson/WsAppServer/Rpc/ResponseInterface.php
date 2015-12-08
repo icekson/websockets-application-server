@@ -25,4 +25,6 @@ interface ResponseInterface extends \Serializable
 
     public static function parseFromJSON($json);
 
+    public function serializeToClientFormat();
+
 }

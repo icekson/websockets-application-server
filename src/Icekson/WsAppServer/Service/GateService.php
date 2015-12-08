@@ -22,7 +22,7 @@ class GateService extends AbstractService
 
     public function getRunCmd()
     {
-        return sprintf("%s scripts/runner.php app:service --type=gate --name='%s'", $this->getConfiguration()->get("php_path"), $this->getName());
+        return sprintf("%s scripts/runner.php app:service --type=gate --name='%s' --config-path='%s'", $this->getConfiguration()->get("php_path"), $this->getName(), $this->getConfigPath());
     }
 
 

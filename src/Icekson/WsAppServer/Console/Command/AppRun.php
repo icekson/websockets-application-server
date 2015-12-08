@@ -38,12 +38,12 @@ class AppRun extends BaseCommand
     {
         $start = time();
         $this->logger()->debug("Start [" .  gmdate("Y-m-d H:i:s").']');
-      //  $this->logger()->debug("arguments : " . var_export($input->getArguments(), true));
+        //  $this->logger()->debug("arguments : " . var_export($input->getArguments(), true));
         $this->logger()->debug("options : ", $input->getOptions());
 
         $configPath = $input->getOption('config-path');
         if(empty($configPath)){
-            $configPath = PATH_ROOT . "config/server.json";
+            $configPath = $this->getConfiguration();
         }else{
             $configPath = PATH_ROOT . $configPath;
         }

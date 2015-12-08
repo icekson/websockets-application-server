@@ -43,4 +43,11 @@ interface ServiceInterface
      * @return int
      */
     public function getPid();
+
+    /**
+     * @param $eventName
+     * @param array $data
+     * @return mixed
+     */
+    public function publishEvent($eventName, array $data);
 }

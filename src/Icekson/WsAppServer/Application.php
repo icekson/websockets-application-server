@@ -132,13 +132,14 @@ class Application implements \SplObserver, ConfigAwareInterface
      */
     public function runService($name, $type, $routingKey = null)
     {
-        $services = $this->getConfiguration()->get("services");
+        $services = $this->getConfiguration()->getServicesConfig();
         $serviceConfig = isset($services[$name]) ? $services[$name] : [];
 
         if(empty($serviceConfig)){
             throw new ServiceException("Service with name '$name' is not found");
         }
-        $service = $this->initService(new ServiceConfig(array_merge($serviceConfig, ["amqp" => $this->getConfiguration()->get("amqp", [])])));
+
+        $service = $this->initService(new ServiceConfig(array_replace_recursive($this->getConfiguration()->toArray(), $serviceConfig)));
         if($service instanceof JobsService){
             $service->setRoutingKey($routingKey);
         }

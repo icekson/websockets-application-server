@@ -22,7 +22,7 @@ class JobsService extends AbstractService
 
     public function getRunCmd()
     {
-        return sprintf("%s scripts/runner.php app:service --type=job --name='%s' --routing-key=%s", $this->getConfiguration()->get("php_path"), $this->getName(), $this->getConfiguration()->get("routing_key"));
+        return sprintf("%s scripts/runner.php app:service --type=job --name='%s' --routing-key='%s' --config-path='%s'", $this->getConfiguration()->get("php_path"), $this->getName(), $this->getConfiguration()->get("routing_key"), $this->getConfigPath());
     }
 
     public function setRoutingKey($routingKey)

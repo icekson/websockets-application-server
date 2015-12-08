@@ -101,4 +101,12 @@ class Response implements ResponseInterface
     {
         $this->requestId = $id;
     }
+
+    /**
+     * @return array
+     */
+    public function serializeToClientFormat()
+    {
+        return json_encode(array_merge(["requestId" => $this->requestId], $this->getData()));
+    }
 }

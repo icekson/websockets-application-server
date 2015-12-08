@@ -44,6 +44,13 @@ class ServiceRun extends BaseCommand
                 InputOption::VALUE_REQUIRED,
                 'Name of service',
                 null
+            )
+            ->addOption(
+                'config-path',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Path to config',
+                "./config/server.json"
             );
     }
 
@@ -56,9 +63,8 @@ class ServiceRun extends BaseCommand
         $name = $input->getOption('name');
         $type = $input->getOption('type');
         $routingKey = $input->getOption('routing-key');
-        $configPath = PATH_ROOT . "config/server.json";
+        $configPath = PATH_ROOT . $input->getOption('config-path');
         $appConf = new ApplicationConfig($configPath);
-
         $app = new Application($appConf);
         $app->runService($name, $type, $routingKey);
 

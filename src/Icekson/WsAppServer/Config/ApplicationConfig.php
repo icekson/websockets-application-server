@@ -11,7 +11,7 @@ class ApplicationConfig extends ConfigAdapter
 {
     public function __construct($conf)
     {
-        parent::__construct($conf, "ws-server");
+        parent::__construct($conf);
     }
 
     /**
@@ -19,7 +19,8 @@ class ApplicationConfig extends ConfigAdapter
      */
     public function getServicesConfig()
     {
-        $services = $this->get('services', []);
+        $conf = new ConfigAdapter($this->get('ws-server', []));
+        $services = $conf->get('services', []);
         return $services;
     }
 
