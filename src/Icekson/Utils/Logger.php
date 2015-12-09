@@ -27,36 +27,42 @@ class Logger
     public static function createLogger($name, $config = [], $level = \Monolog\Logger::DEBUG)
     {
 //        if(!isset(self::$loggers[$name])) {
-            $logger = new \Monolog\Logger($name);
-            $logger->pushHandler(new StreamHandler('php://stdout'));
-            $logger->pushHandler(new StreamHandler(PATH_ROOT . '/logs/' . preg_replace('/[\/\\\._-]+/', ".", $name) . ".log", $level));
+        $logger = new \Monolog\Logger($name);
+        $logger->pushHandler(new StreamHandler('php://stdout'));
+        $file = PATH_ROOT . '/logs/' . preg_replace('/[\/\\\._-]+/', ".", $name) . ".log";
+        if(!file_exists($file)){
+            $h = @fopen($file, "w");
+            @fclose($h);
+        }
+        @chmod($file, 0766);
+        $logger->pushHandler(new StreamHandler($file, $level));
 
-            if(!empty($config) && (isset($config['amqp']) || isset($config['vhost']))) {
-                $host = isset($config['amqp']) ? $config['amqp']['host'] : $config['host'];
-                $port = isset($config['amqp']) ? $config['amqp']['port'] : $config['port'];
-                $user = isset($config['amqp']) ? $config['amqp']['user'] : $config['user'];
-                $password = isset($config['amqp']) ? $config['amqp']['password'] : $config['password'];
-                $vhost = isset($config['amqp']) ? $config['amqp']['vhost'] : $config['vhost'];
-                $channel = null;
-                try {
-                    $conn = new AMQPStreamConnection($host, $port, $user, $password, $vhost);
-                    $channel = $conn->channel();
-                    $channel->exchange_declare('monitor-log', 'topic', false, true, false);
+        if (!empty($config) && (isset($config['amqp']) || isset($config['vhost']))) {
+            $host = isset($config['amqp']) ? $config['amqp']['host'] : $config['host'];
+            $port = isset($config['amqp']) ? $config['amqp']['port'] : $config['port'];
+            $user = isset($config['amqp']) ? $config['amqp']['user'] : $config['user'];
+            $password = isset($config['amqp']) ? $config['amqp']['password'] : $config['password'];
+            $vhost = isset($config['amqp']) ? $config['amqp']['vhost'] : $config['vhost'];
+            $channel = null;
+            try {
+                $conn = new AMQPStreamConnection($host, $port, $user, $password, $vhost);
+                $channel = $conn->channel();
+                $channel->exchange_declare('monitor-log', 'topic', false, true, false);
 
-                    register_shutdown_function(function () use ($conn, $channel) {
-                        $conn->close();
-                        $channel->close();
-                    });
+                register_shutdown_function(function () use ($conn, $channel) {
+                    $conn->close();
+                    $channel->close();
+                });
 
-                } catch (\Exception $e) {
-                    // throw $e;
-                    // echo 'amqp logger error: ' . $e->getMessage() . "\n" . $e->getTraceAsString();
-                }
-                if ($channel !== null) {
-                    $logger->pushHandler(new AmqpHandler($channel, 'monitor-log'));
-                }
+            } catch (\Exception $e) {
+                // throw $e;
+                // echo 'amqp logger error: ' . $e->getMessage() . "\n" . $e->getTraceAsString();
             }
-            self::$loggers[$name] = $logger;
+            if ($channel !== null) {
+                $logger->pushHandler(new AmqpHandler($channel, 'monitor-log'));
+            }
+        }
+        self::$loggers[$name] = $logger;
 //        }
 
         return self::$loggers[$name];
