@@ -26,12 +26,13 @@ class Logger
      */
     public static function createLogger($name, $config = [], $level = \Monolog\Logger::DEBUG)
     {
-//        if(!isset(self::$loggers[$name])) {
+        if (!isset(self::$loggers[$name])) {
             $logger = new \Monolog\Logger($name);
             $logger->pushHandler(new StreamHandler('php://stdout'));
-            $logger->pushHandler(new StreamHandler(PATH_ROOT . '/logs/' . preg_replace('/[\/\\\._-]+/', ".", $name) . ".log", $level));
+            $file = PATH_ROOT . '/logs/' . preg_replace('/[\/\\\._-]+/', ".", $name) . ".log";
+            $logger->pushHandler(new StreamHandler($file, $level, true, 0766));
 
-            if(!empty($config) && (isset($config['amqp']) || isset($config['vhost']))) {
+            if (!empty($config) && (isset($config['amqp']) || isset($config['vhost']))) {
                 $host = isset($config['amqp']) ? $config['amqp']['host'] : $config['host'];
                 $port = isset($config['amqp']) ? $config['amqp']['port'] : $config['port'];
                 $user = isset($config['amqp']) ? $config['amqp']['user'] : $config['user'];
@@ -57,7 +58,7 @@ class Logger
                 }
             }
             self::$loggers[$name] = $logger;
-//        }
+        }
 
         return self::$loggers[$name];
     }
