@@ -128,7 +128,7 @@ class Worker implements ConfigAwareInterface
                 $task = new $taskClass();
                 if($task instanceof JobInterface) {
                     if($task instanceof ConfigAwareInterface){
-                        $task->setConfiguration($this->config);
+                        $task->setConfiguration($this->getConfiguration());
                     }
                     $params = (array)$body->params;
                     call_user_func([$task, 'perform'], $params);

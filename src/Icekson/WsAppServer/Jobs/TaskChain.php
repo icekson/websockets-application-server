@@ -25,9 +25,9 @@ class TaskChain implements QueueInterface, DelayedQueueInterface, PushableInterf
 
     /**
      * TaskChain constructor.
-     * @param AMQPChainQueue $queue
+     * @param ChainQueue $queue
      */
-    public function __construct(AMQPChainQueue $queue)
+    public function __construct(ChainQueue $queue)
     {
         $this->queue = $queue;
         $this->chain = new \ArrayObject();

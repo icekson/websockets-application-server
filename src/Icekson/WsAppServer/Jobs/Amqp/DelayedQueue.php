@@ -85,7 +85,7 @@ class DelayedQueue implements DelayedQueueInterface
             'x-dead-letter-exchange' => $this->targetExchangeName,
             'x-dead-letter-routing-key' => JobInterface::JOB_MATCH
         )));
-        $this->channel->queue_bind($this->queueName . $delay, $this->exchangeName, "delayed-task");
+        $this->channel->queue_bind($this->queueName . $delay, $this->exchangeName, "delayed-task-" . $delay);
 
 
     }
@@ -121,7 +121,7 @@ class DelayedQueue implements DelayedQueueInterface
         $params = new ParamsBag($params);
         $body = json_encode((object)['task' => $jobClassName, 'params' => $params->toArray()]);
         $msg = new AMQPMessage($body, ['content_type' => 'application/json', 'delivery_mode' => 2]);
-        $this->channel->basic_publish($msg, $this->exchangeName, 'delayed-task');
+        $this->channel->basic_publish($msg, $this->exchangeName, 'delayed-task-' . $delay);
 
 
     }

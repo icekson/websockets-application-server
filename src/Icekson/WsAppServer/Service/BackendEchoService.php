@@ -32,6 +32,7 @@ class BackendEchoService extends BackendService implements RequestHandlerInterfa
     public function onRequest(RequestInterface $req)
     {
         $this->getLogger()->debug("onRequest" . $req->serialize());
+        $this->dispatch($req);
     }
 
     public function dispatch(RequestInterface $req)
