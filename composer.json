@@ -12,7 +12,7 @@
     ],
     "require": {
         "react/react": "^0.4.2",
-        "videlalvaro/php-amqplib": "2.6.*",
+        "videlalvaro/php-amqplib": "v2.6.0",
         "cboden/ratchet": "^0.3.3",
         "symfony/process": "^2.7",
         "symfony/console": "^2.7",
