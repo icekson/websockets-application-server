@@ -68,6 +68,13 @@ class RedisStorage implements StorageInterface
      */
     public function incrementCounter($serviceName)
     {
+        $timeout = 10000;
+        $count = 0;
+        do{
+            $res = $this->lock("services");
+            $count++;
+        }while(!$res && $count < $timeout);
+
         $info = $this->getServicesInfo();
         $serviceInfo = [];
         $count = 0;
@@ -80,7 +87,28 @@ class RedisStorage implements StorageInterface
         $serviceInfo['connections'] = $count;
         $info[$serviceName] = $serviceInfo;
         $this->saveServicesInfo($info);
+        $this->unlock("services");
         return $this;
+    }
+
+
+    /**
+     * @param $key
+     * @return bool
+     */
+    private function lock($key)
+    {
+        $isLocked = $this->redis->get("$key.lock");
+        if($isLocked){
+            return false;
+        }
+        $this->redis->set("$key.lock", true);
+        return true;
+    }
+
+    private function unlock($key)
+    {
+        $this->redis->set("$key.lock", false);
     }
 
     /**
@@ -90,6 +118,13 @@ class RedisStorage implements StorageInterface
      */
     public function decrementCounter($serviceName)
     {
+        $timeout = 10000;
+        $count = 0;
+        do{
+            $res = $this->lock("services");
+            $count++;
+        }while(!$res && $count < $timeout);
+
         $info = $this->getServicesInfo();
         $serviceInfo = [];
         $count = 0;
@@ -104,6 +139,7 @@ class RedisStorage implements StorageInterface
         $serviceInfo['connections'] = $count;
         $info[$serviceName] = $serviceInfo;
         $this->saveServicesInfo($info);
+        $this->unlock("services");
         return $this;
     }
 
@@ -113,6 +149,13 @@ class RedisStorage implements StorageInterface
      */
     public function persistAvailableConnectors(array $services)
     {
+        $timeout = 10000;
+        $count = 0;
+        do{
+            $res = $this->lock("services");
+            $count++;
+        }while(!$res && $count < $timeout);
+
         $info = $this->getServicesInfo();
 
         foreach ($services as $service) {
@@ -121,6 +164,8 @@ class RedisStorage implements StorageInterface
             ], $service->toArray());
         }
         $this->saveServicesInfo($info);
+
+        $this->unlock("services");
 
         return $this;
     }
