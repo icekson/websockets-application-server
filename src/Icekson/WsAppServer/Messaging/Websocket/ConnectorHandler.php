@@ -360,6 +360,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     public function pingConnections()
     {
         $this->logger()->debug("ping connections, " . count($this->getConnectionsPool()) . " active connections");
+
         /** @var ConnectionInterface $conn */
         foreach ($this->getConnectionsPool() as $conn) {
             $msg = new Frame(0, true, Frame::OP_PING);
