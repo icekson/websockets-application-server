@@ -36,29 +36,46 @@ class ConfigAdapter implements ConfigureInterface
     }
 
     private function parse($config, $index){
-        $localConf = [];
+        $resConf = [];
         if (is_string($config)) {
-
-            if(is_dir($config)){
-                $iterator = new \DirectoryIterator($config);
-                $res = [];
-                foreach ($iterator as $file) {
-                    if($file->isFile()){
-                        $res = $this->merge($res, $this->_parse($file->getRealPath()));
-                    }
-                }
-                $config = $res;
-            }else{
-                $config = $this->_parse($config);
+            $config = [$config];
+        }
+        $isArrayConfig = false;
+        foreach ($config as $item) {
+            if(!is_string($item)){
+                $isArrayConfig = true;
+                break;
             }
-
         }
 
-        if ($index !== null && isset($config[$index])) {
-            $config = $config[$index];
+        if (!$isArrayConfig) {
+            foreach ($config as $conf) {
+                if(is_string($conf)) {
+                    if (is_dir($conf)) {
+                        $iterator = new \DirectoryIterator($conf);
+                        $res = [];
+                        foreach ($iterator as $file) {
+                            if ($file->isFile()) {
+                                $res = $this->merge($res, $this->_parse($file->getRealPath()));
+                            }
+                        }
+                        $resConf = $this->merge($resConf, $res);
+                    } else {
+                        $conf = $this->_parse($conf);
+                        $resConf = $this->merge($resConf, $conf);
+                    }
+                }else{
+                    $resConf = $this->merge($resConf, $conf);
+                }
+            }
+        }else{
+            $resConf = $config;
         }
 
-        return $config;
+        if ($index !== null && isset($resConf[$index])) {
+            $resConf = $resConf[$index];
+        }
+        return $resConf;
     }
 
     private function _parse($config)

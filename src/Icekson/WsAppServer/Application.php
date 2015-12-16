@@ -8,6 +8,7 @@
 namespace Icekson\WsAppServer;
 
 
+use Application\Service\BackendService;
 use Icekson\Utils\Registry;
 use Icekson\WsAppServer\Config\ApplicationConfig;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
@@ -74,7 +75,7 @@ class Application implements \SplObserver, ConfigAwareInterface
 
         $amqpConf = $this->config->get('amqp', []);
         $servicesConfig = $this->config->getServicesConfig();
-
+//        var_export($servicesConfig);exit;
         $loop = $this->loop;
         $this->loop = $loop;
         ProcessStarter::getInstance($loop);
@@ -85,8 +86,20 @@ class Application implements \SplObserver, ConfigAwareInterface
                 /** @var ServiceConfig $conf */
                 $conf = new ServiceConfig(array_merge($serviceConf, ['amqp' => $amqpConf]));
                 $service = $this->initService($conf);
-                $service->startAsProcess();
-                $this->services[$service->getPid()] = $service;
+                if($service instanceof BackendService){
+                    $instances = $service->getConfiguration()->get('count', 1);
+                    $conf = $conf->toArray();
+                    for($i = 1; $i <= $instances; $i++){
+                        $conf['name'] = preg_replace("/(\d+)$/", $i, $conf['name']);
+                        $s = $this->initService(new ServiceConfig($conf));
+                        $s->startAsProcess();
+                        $this->services[$s->getPid()] = $s;
+                    }
+                }else{
+                    $service->startAsProcess();
+                    $this->services[$service->getPid()] = $service;
+                }
+
 
             }catch (ServiceException $ex){
                 $this->logger->error("Init service error: " . $ex->getMessage());
@@ -133,11 +146,22 @@ class Application implements \SplObserver, ConfigAwareInterface
     public function runService($name, $type, $routingKey = null)
     {
         $services = $this->getConfiguration()->getServicesConfig();
-        $serviceConfig = isset($services[$name]) ? $services[$name] : [];
+        if($type == 'backend'){
+            $key = preg_replace("/(-\d+$)/", "", $name);
+            $serviceConfig = isset($services[$key]) ? $services[$key] : [];
+            if(!empty($serviceConfig)){
+                $serviceConfig['name'] = $name;
+            }
+        }else{
+            $serviceConfig = isset($services[$name]) ? $services[$name] : [];
+        }
+
+
 
         if(empty($serviceConfig)){
             throw new ServiceException("Service with name '$name' is not found");
         }
+
 
         $service = $this->initService(new ServiceConfig(array_replace_recursive($this->getConfiguration()->toArray(), $serviceConfig)));
         if($service instanceof JobsService){

@@ -68,7 +68,9 @@ class PubSub implements PubSubInterface
         }
         $this->channel = $this->connection->channel();
         $this->channel->exchange_declare($this->exchangeName, 'topic', false, true, false);
-        $this->channel->queue_declare($this->exchangeName.".".$this->serviceName, false, true, false, false);
+        if(!preg_match("/backend-server/", $this->serviceName)) {
+            $this->channel->queue_declare($this->exchangeName . "." . $this->serviceName, false, true, false, false);
+        }
     }
 
     public function __destruct()
