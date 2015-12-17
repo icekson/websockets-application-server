@@ -66,6 +66,7 @@ class ProcessStarter implements \SplSubject
     public function runNewProcess($cmd)
     {
         $search = 'ps uwx | grep "' . preg_replace("/\s+/", "\\s", $cmd) . '"';
+        $search = str_replace("'", "", $search);
         $this->getLogger()->info("cmd: " . $cmd);
         $this->getLogger()->info("search cmd: " . $search);
         $process = new Process($search);
