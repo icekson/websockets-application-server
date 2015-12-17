@@ -66,6 +66,7 @@ class ProcessStarter implements \SplSubject
     public function runNewProcess($cmd)
     {
         $search = 'ps uwx | grep "' . preg_replace("/\s+/", "\\s", $cmd) . '"';
+        $search = preg_replace("/'+/", "", $search);
         $this->getLogger()->info("cmd: " . $cmd);
         $this->getLogger()->info("search cmd: " . $search);
         $process = new Process($search);
@@ -129,14 +130,15 @@ class ProcessStarter implements \SplSubject
             foreach ($lines as $line) {
                 $ar = preg_split('/\s+/', trim($line));
                 $theSame = true;
+                $arr = array_slice($ar, array_search('scripts/runner.php', $ar) - 1);
                 while (count($parts) > 0) {
-                    $part = array_shift($parts);
-                    if (!in_array($part, $ar)) {
+                    $part = str_replace("'", "", array_shift($parts));
+                    if (!in_array($part, $arr)) {
                         $theSame = false;
                         break;
                     }
                 }
-                if ($theSame) {
+                if ($theSame && count($ar) > 1) {
                     $pid = (int)$ar[1];
                     posix_kill($pid, SIGKILL);
                     $stopped = true;
