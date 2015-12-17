@@ -34,9 +34,9 @@ class RequestParser
      * @return array $json
      */
     private function parseJSON($json){
-        $json = str_replace(array("\n","\r"),"",$json);
-        $json = preg_replace('/([{,]+)(\s*)([^"]+?)\s*:/','$1"$3":',$json);
-        $json = preg_replace('/(,)\s*}$/','}',$json);
+        // $json = str_replace(array("\n","\r"),"",$json);
+        //  $json = preg_replace('/([{,]+)(\s*)([^"]+?)\s*:/','$1"$3":',$json);
+        //  $json = preg_replace('/(,)\s*}$/','}',$json);
 
         $res = json_decode($json,true);
 
