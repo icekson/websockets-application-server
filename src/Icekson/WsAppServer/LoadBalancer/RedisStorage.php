@@ -20,9 +20,10 @@ class RedisStorage implements StorageInterface
 
     public function __construct(ConfigureInterface $config)
     {
-        $host = $config->get("host", "127.0.0.1");
-        $port = $config->get("port", 6379);
-        $this->redis = new Client("tcp://{$host}:{$port}", ['prefix' => 'ws-app.load-balancer']);
+        $redis = $config->get('redis', ['host' => '127.0.0.1', 'port' => 6379, 'perfix' => 'ws-app.load-balancer']);
+        $host = $redis["host"];
+        $port = $redis["port"];
+        $this->redis = new Client("tcp://{$host}:{$port}", ['prefix' => $redis['prefix']]);
     }
 
     /**
