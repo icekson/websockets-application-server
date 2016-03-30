@@ -162,6 +162,30 @@ class ProcessStarter implements \SplSubject
         }
     }
 
+    /**
+     * @param $cmd
+     * @return bool
+     */
+    public function checkProcessByCmd($cmd)
+    {
+        $search = 'ps uwx | grep "' . preg_replace("/\s+/", "\\s", $cmd) . '"';
+        $search = preg_replace("/'+/", "", $search);
+        $this->getLogger()->info("check cmd: " . $cmd);
+        $this->getLogger()->info("search cmd: " . $search);
+        $process = new Process($search);
+        $process->run();
+        $out = $process->getOutput();
+        $lines = preg_split('/\n/', $out);
+        $pid = -1;
+        if (count($lines) > 1) {
+            $this->getLogger()->info("Process is run");
+            return true;
+        }else{
+            $this->getLogger()->info("Process is not found run");
+            return false;
+        }
+    }
+
 
     /**
      * @param int $pid

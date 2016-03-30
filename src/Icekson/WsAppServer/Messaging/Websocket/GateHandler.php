@@ -156,7 +156,7 @@ class GateHandler implements MessageComponentInterface, ConfigAwareInterface
 
             switch ($operation) {
                 case 'init' :
-                    $res = Balancer::getInstance()->getConnector();
+                    $res = Balancer::getInstance($this->getConfiguration())->getConnector();
 //                    $res = [];
 //                    foreach (Balancer::getInstance()->getAvalableConnectors() as $avalableConnector) {
 //                        $res[] = $avalableConnector->toArray();

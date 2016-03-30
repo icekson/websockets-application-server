@@ -79,7 +79,7 @@ class Application implements \SplObserver, ConfigAwareInterface
         $loop = $this->loop;
         $this->loop = $loop;
         ProcessStarter::getInstance($loop);
-        Balancer::getInstance()->reset();
+        Balancer::getInstance($this->getConfiguration())->reset();
         foreach ($servicesConfig as $serviceConf) {
             try {
 
@@ -135,6 +135,22 @@ class Application implements \SplObserver, ConfigAwareInterface
 //            }
 //        });
         $loop->run();
+    }
+
+    /**
+     * @param null|string $configPath
+     */
+    public function check($configPath = null)
+    {
+        if($configPath === null){
+            $configPath = CONFIG_PATH;
+        }
+        $cmd = sprintf("%s scripts/runner.php app:server-start --config-path='%s'", $this->getConfiguration()->get("php_path"), $configPath);
+        $res = ProcessStarter::getInstance()->checkProcessByCmd($cmd);
+        if(!$res){
+            $this->logger->info("App server isn't started, try to start...");
+            $this->start();
+        }
     }
 
     /**

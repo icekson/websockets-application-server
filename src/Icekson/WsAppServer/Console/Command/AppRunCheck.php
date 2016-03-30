@@ -17,14 +17,14 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class AppRun extends BaseCommand
+class AppRunCheck extends BaseCommand
 {
 
     protected function configure()
     {
         $this
-            ->setName('app-server:start')
-            ->setDescription('Start application server')
+            ->setName('app-server:check')
+            ->setDescription('Check application server state')
             ->addOption(
                 'config-path',
                 null,
@@ -50,7 +50,7 @@ class AppRun extends BaseCommand
             }
             $appConfig = new ApplicationConfig($configPath);
             $app = new Application($appConfig);
-            $app->start();
+            $app->check($configPath);
         }catch (\Throwable $ex){
             $this->logger()->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
         }

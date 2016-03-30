@@ -118,7 +118,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     public function onOpen(ConnectionInterface $conn)
     {
         $this->clients->attach($conn);
-        Balancer::getInstance()->attachConnection($this->getName());
+        Balancer::getInstance($this->getConfiguration())->attachConnection($this->getName());
         $this->logger()->info("new connection $conn->resourceId ({$conn->remoteAddress}) : " . $this->clients->count() . " connected");
 
     }
@@ -134,7 +134,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         if (isset($this->users[$conn->resourceId])) {
             unset($this->users[$conn->resourceId]);
         }
-        Balancer::getInstance()->detachConnection($this->getName());
+        Balancer::getInstance($this->getConfiguration())->detachConnection($this->getName());
         $this->logger()->info("close connection $conn->resourceId ({$conn->remoteAddress}):  " . $this->clients->count() . " connected");
 
         if(isset($this->subscriptions[$conn->resourceId])){

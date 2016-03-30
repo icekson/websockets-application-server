@@ -66,7 +66,7 @@ class ConnectorService extends AbstractService
             ),
             $webSock
         );
-        Balancer::getInstance()->registerConnector($this->getConfiguration());
+        Balancer::getInstance($this->getConfiguration())->registerConnector($this->getConfiguration());
         $loop->run();
     }
 

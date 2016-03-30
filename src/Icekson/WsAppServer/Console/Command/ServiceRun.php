@@ -57,17 +57,21 @@ class ServiceRun extends BaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $start = time();
-        $this->logger()->debug("Start [" . gmdate("Y-m-d H:i:s") . ']');
-        $this->logger()->debug("arguments : " . var_export($input->getArguments(), true));
-        $this->logger()->debug("options : " . var_export($input->getOptions(), true));
-        $name = $input->getOption('name');
-        $type = $input->getOption('type');
-        $routingKey = $input->getOption('routing-key');
-        $configPath = PATH_ROOT . $input->getOption('config-path');
-        $appConf = new ApplicationConfig($configPath);
-        $app = new Application($appConf);
-        $app->runService($name, $type, $routingKey);
+        try {
+            $this->logger()->debug("Start [" . gmdate("Y-m-d H:i:s") . ']');
+            $this->logger()->debug("arguments : " . var_export($input->getArguments(), true));
+            $this->logger()->debug("options : " . var_export($input->getOptions(), true));
+            $name = $input->getOption('name');
+            $type = $input->getOption('type');
+            $routingKey = $input->getOption('routing-key');
+            $configPath = PATH_ROOT . $input->getOption('config-path');
+            $appConf = new ApplicationConfig($configPath);
+            $app = new Application($appConf);
+            $app->runService($name, $type, $routingKey);
 
+        }catch (\Throwable $ex){
+            $this->logger()->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
+        }
         $executionTime = gmdate("H:i:s", time() - $start);
         $this->logger()->debug("Finish [" . gmdate("Y-m-d H:i:s") . ']');
         $this->logger()->debug("Execution Time $executionTime [H:i:s]");
