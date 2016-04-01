@@ -145,14 +145,13 @@ class Application implements \SplObserver, ConfigAwareInterface
         if($configPath === null){
             $configPath = CONFIG_PATH;
         }
-        $cmd = sprintf("%s scripts/runner.php app:server-start --config-path='%s'", $this->getConfiguration()->get("php_path"), $configPath);
+        $cmd = sprintf("%s scripts/runner.php app-server:start --config-path='%s'", $this->getConfiguration()->get("script_php_path", "php"), $configPath);
         $res = ProcessStarter::getInstance()->checkProcessByCmd($cmd);
         if(!$res){
             $this->logger->info("App server isn't started, try to start...");
-            $this->start();
+            ProcessStarter::getInstance()->runNewProcess($cmd);
         }
     }
-
     /**
      * @param $name
      * @param $type
