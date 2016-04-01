@@ -23,6 +23,7 @@ use Icekson\WsAppServer\Exception\ServiceException;
 use Icekson\WsAppServer\Service\ServiceInterface;
 use React\EventLoop\LoopInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\Process\Process;
 
 class Application implements \SplObserver, ConfigAwareInterface
 {
@@ -86,28 +87,25 @@ class Application implements \SplObserver, ConfigAwareInterface
                 /** @var ServiceConfig $conf */
                 $conf = new ServiceConfig(array_merge($serviceConf, ['amqp' => $amqpConf]));
                 $service = $this->initService($conf);
-                if($service instanceof BackendService){
+                if ($service instanceof BackendService) {
                     $instances = $service->getConfiguration()->get('count', 1);
                     $conf = $conf->toArray();
-                    for($i = 1; $i <= $instances; $i++){
+                    for ($i = 1; $i <= $instances; $i++) {
                         $conf['name'] = preg_replace("/(\d+)$/", $i, $conf['name']);
                         $s = $this->initService(new ServiceConfig($conf));
                         $s->startAsProcess();
                         $this->services[$s->getPid()] = $s;
                     }
-                }else{
+                } else {
                     $service->startAsProcess();
                     $this->services[$service->getPid()] = $service;
                 }
 
 
-            }catch (ServiceException $ex){
+            } catch (ServiceException $ex) {
                 $this->logger->error("Init service error: " . $ex->getMessage());
             }
         }
-
-
-
 
 
 //        $loop->addPeriodicTimer(5, function() use ($app, $loop){
@@ -142,16 +140,48 @@ class Application implements \SplObserver, ConfigAwareInterface
      */
     public function check($configPath = null)
     {
-        if($configPath === null){
+        if ($configPath === null) {
             $configPath = CONFIG_PATH;
         }
-        $cmd = sprintf("%s scripts/runner.php app-server:start --config-path='%s'", $this->getConfiguration()->get("script_php_path", "php"), $configPath);
+        $loop = $this->loop;
+        ProcessStarter::getInstance($loop);
+        $cmd = sprintf("%s scripts/runner.php app-server:start --config-path='%s'", $this->getConfiguration()->get("script_php_path"), $configPath);
         $res = ProcessStarter::getInstance()->checkProcessByCmd($cmd);
-        if(!$res){
-            $this->logger->info("App server isn't started, try to start...");
-            ProcessStarter::getInstance()->runNewProcess($cmd);
+        if (!$res) {
+            $needToRestart = false;
+            $amqpConf = $this->config->get('amqp', []);
+            $servicesConfig = $this->config->getServicesConfig();
+            foreach ($servicesConfig as $serviceConf) {
+
+                /** @var ServiceConfig $conf */
+                $conf = new ServiceConfig(array_merge($serviceConf, ['amqp' => $amqpConf]));
+                $service = $this->initService($conf);
+                $_cmd = $service->getRunCmd();
+                $r = ProcessStarter::getInstance()->checkProcessByCmd($_cmd);
+                if (!$r) {
+                    $needToRestart = true;
+                    break;
+                }
+            }
+            if ($needToRestart) {
+                $this->_runCommand($cmd);
+            }
         }
     }
+
+    private function _runCommand($cmd, $wait = 30)
+    {
+        $this->logger->info("App server isn't started, try to start...");
+        $process = new Process($cmd);
+        $process->start();
+        sleep($wait);
+        if ($process->isRunning()) {
+            $this->logger->debug("Server started: pid - " . $process->getPid());
+        } else {
+            $this->logger->warning($process->getErrorOutput());
+        }
+    }
+
     /**
      * @param $name
      * @param $type
@@ -161,25 +191,24 @@ class Application implements \SplObserver, ConfigAwareInterface
     public function runService($name, $type, $routingKey = null)
     {
         $services = $this->getConfiguration()->getServicesConfig();
-        if($type == 'backend'){
+        if ($type == 'backend') {
             $key = preg_replace("/(-\d+$)/", "", $name);
             $serviceConfig = isset($services[$key]) ? $services[$key] : [];
-            if(!empty($serviceConfig)){
+            if (!empty($serviceConfig)) {
                 $serviceConfig['name'] = $name;
             }
-        }else{
+        } else {
             $serviceConfig = isset($services[$name]) ? $services[$name] : [];
         }
 
 
-
-        if(empty($serviceConfig)){
+        if (empty($serviceConfig)) {
             throw new ServiceException("Service with name '$name' is not found");
         }
 
 
         $service = $this->initService(new ServiceConfig(array_replace_recursive($this->getConfiguration()->toArray(), $serviceConfig)));
-        if($service instanceof JobsService){
+        if ($service instanceof JobsService) {
             $service->setRoutingKey($routingKey);
         }
         $service->start();
@@ -188,7 +217,21 @@ class Application implements \SplObserver, ConfigAwareInterface
 
     public function stop()
     {
-        $this->logger->debug("Stop application signal is received");
+        $this->logger->debug("Stop application");
+        $loop = $this->loop;
+        ProcessStarter::getInstance($loop);
+
+        $amqpConf = $this->config->get('amqp', []);
+        $servicesConfig = $this->config->getServicesConfig();
+        foreach ($servicesConfig as $serviceConf) {
+
+            /** @var ServiceConfig $conf */
+            $conf = new ServiceConfig(array_merge($serviceConf, ['amqp' => $amqpConf]));
+            $service = $this->initService($conf);
+
+            $pid = null;
+            ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
+        }
         $this->isStoped = true;
     }
 
@@ -200,14 +243,14 @@ class Application implements \SplObserver, ConfigAwareInterface
     private function initService(ServiceConfig $conf)
     {
         $class = $conf->getClass();
-        $class = "\\".trim($class, "\\");
+        $class = "\\" . trim($class, "\\");
 
-        if(!class_exists($class)){
+        if (!class_exists($class)) {
             throw new ServiceException("Invalid service class name set for service: {$class}");
         }
         $instance = new $class($this, $conf);
 
-        if(!$instance instanceof ServiceInterface){
+        if (!$instance instanceof ServiceInterface) {
             throw new ServiceException("Provided service class doesn't implement ServiceInterface");
         }
         return $instance;

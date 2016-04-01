@@ -45,10 +45,8 @@ class AppRunCheck extends BaseCommand
             $configPath = $input->getOption('config-path');
             if (empty($configPath)) {
                 $configPath = CONFIG_PATH;
-            } else {
-                $configPath = PATH_ROOT . $configPath;
             }
-            $appConfig = new ApplicationConfig($configPath);
+            $appConfig = new ApplicationConfig(PATH_ROOT . $configPath);
             $app = new Application($appConfig);
             $app->check($configPath);
         }catch (\Throwable $ex){

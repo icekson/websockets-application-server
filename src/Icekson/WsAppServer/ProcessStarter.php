@@ -116,6 +116,7 @@ class ProcessStarter implements \SplSubject
         });
 
         $pid = $process->getPid();
+        $this->getLogger()->debug("new process pid: " . $pid);
         $this->threads[$pid] = true;
         return $pid;
 
@@ -164,9 +165,10 @@ class ProcessStarter implements \SplSubject
 
     /**
      * @param $cmd
+     * @param null $pid
      * @return bool
      */
-    public function checkProcessByCmd($cmd)
+    public function checkProcessByCmd($cmd, &$pid = null)
     {
         $search = 'ps uwx | grep "' . preg_replace("/\s+/", "\\s", $cmd) . '"';
         $search = preg_replace("/'+/", "", $search);
@@ -183,6 +185,26 @@ class ProcessStarter implements \SplSubject
         }else{
             $this->getLogger()->info("Process is not found run");
             return false;
+        }
+    }
+
+    /**
+     * @param $cmd
+     */
+    public function stopProccessByCmd($cmd)
+    {
+        $search = 'ps uwx | grep "' . preg_replace("/\s+/", "\\s", $cmd) . '"';
+        $search = preg_replace("/'+/", "", $search);
+        $this->getLogger()->info("check cmd: " . $cmd);
+        $this->getLogger()->info("search cmd: " . $search);
+        $process = new Process($search);
+        $process->run();
+        $out = $process->getOutput();
+        $lines = preg_split('/\n/', $out);
+        $pid = -1;
+        if (count($lines) > 1) {
+            $this->getLogger()->info("Process is run, stop it");
+            $this->stop($cmd, $lines);
         }
     }
 
