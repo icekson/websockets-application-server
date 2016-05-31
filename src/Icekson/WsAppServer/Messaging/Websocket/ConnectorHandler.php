@@ -248,7 +248,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     $this->logger()->debug("rpc params", $params);
                     $this->rpcQueue[$from->resourceId][] = $requestId;
                     $this->sendRequest($requestId, "$service/$action", $params);
-                    break;
+                    return;
                 default:
                     $responseBuilder->setError("Invalid request");
             }
