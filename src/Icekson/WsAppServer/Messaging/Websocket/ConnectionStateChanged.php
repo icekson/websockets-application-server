@@ -11,5 +11,5 @@ interface ConnectionStateChanged
 {
     public function onConnected($data);
 
-    public function onDisconnected($data);
+    public function onDisconnected($data); 
 }
