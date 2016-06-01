@@ -20,11 +20,11 @@ use Icekson\WsAppServer\Messaging\Websocket\ConnectorHandler;
 class ConnectorService extends AbstractService
 {
 
-    private $pubsubConsumer = null;
+    protected $pubsubConsumer = null;
     /**
      * @var null|RPC
      */
-    private $rpc = null;
+    protected $rpc = null;
 
     public function __construct(Application $app, ServiceConfig $config)
     {
