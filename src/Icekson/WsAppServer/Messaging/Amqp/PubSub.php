@@ -93,7 +93,11 @@ class PubSub implements PubSubInterface
     {
         $this->logger->info("Subscribe: topic - " . $topic . "; subscriptionId - $subscriptionId");
         $this->subscriptions[$topic] = $subscriptionId;
-        $routingKey = $topic . "." . $subscriptionId;
+        if(preg_match("/\w+\.\*/i", $topic) || $subscriptionId === null){
+            $routingKey = $topic;
+        }else{
+            $routingKey = $topic . "." . $subscriptionId;
+        }
         $this->initConnection();
         $this->channel->queue_bind($this->exchangeName.".".$this->serviceName, $this->exchangeName, $routingKey);
     }
@@ -106,7 +110,11 @@ class PubSub implements PubSubInterface
     public function unsubscribe($topic, $subscriptionId)
     {
         $this->logger->info("Unsubscribe: topic - " . $topic . "; subscriptionId - $subscriptionId");
-        $routingKey = $topic . "." . $subscriptionId;
+        if(preg_match("/\w+\.\*/i", $topic) || $subscriptionId === null){
+            $routingKey = $topic;
+        }else{
+            $routingKey = $topic . "." . $subscriptionId;
+        }
         $this->initConnection();
         $this->channel->queue_unbind($this->exchangeName.".".$this->serviceName, $this->exchangeName, $routingKey);
         if(isset($this->subscriptions[$topic])) {

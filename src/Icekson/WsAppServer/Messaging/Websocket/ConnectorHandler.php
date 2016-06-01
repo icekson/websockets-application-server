@@ -87,6 +87,11 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     }
 
     /**
+     * @var null|ConnectionStateChanged[]
+     */
+    private $connectionStateCallbacks = [];
+
+    /**
      * Handler constructor.
      * @param $name
      * @param LoopInterface $loop
@@ -103,7 +108,6 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $this->rpcQueue = new \ArrayObject();
         $this->rpc = new RPC(RPC::TYPE_REQUEST, $loop, $this, $config->get("name"), $this->getConfiguration()->toArray());
     }
-
 
     public function getVersion()
     {
@@ -144,6 +148,33 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
             }
         }
 
+        $this->onDisconnected($conn);
+
+    }
+
+
+    /**
+     * Used for publish online status of user
+     * @param ConnectionInterface $connection
+     */
+    public function onConnected(ConnectionInterface $connection)
+    {
+        foreach ($this->connectionStateCallbacks as $connectionStateCallback) {
+            $user = isset($this->users[$connection->resourceId]) ? $this->users[$connection->resourceId] : null;
+            $connectionStateCallback->onConnected($user);
+        }
+    }
+
+    /**
+     * Used for publish offline status of user
+     * @param ConnectionInterface $connection
+     */
+    public function onDisconnected(ConnectionInterface $connection)
+    {
+        foreach ($this->connectionStateCallbacks as $connectionStateCallback) {
+            $user = isset($this->users[$connection->resourceId]) ? $this->users[$connection->resourceId] : null;
+            $connectionStateCallback->onDisconnected($user);
+        }
     }
 
     /**
@@ -409,10 +440,10 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     {
         $this->logger()->info("on rpc response: " . $resp->serialize());
         $cons = $this->findConnectionsByRequestId($resp->getRequestId());
-        $this->logger()->info("on rpc response: found connections: " . count($cons));
+        $this->logger()->debug("on rpc response: found connections: " . count($cons));
         foreach ($cons as $conn) {
             $conn->send($resp->serializeToClientFormat());
-            $this->logger()->info("on rpc response: send resp to client: " . $conn->resourceId);
+            $this->logger()->debug("on rpc response: send resp to client: " . $conn->resourceId);
             if(isset($this->rpcQueue[$conn->resourceId])){
                 $index = array_search($resp->getRequestId(), $this->rpcQueue[$conn->resourceId]);
                 if($index > -1){
@@ -439,7 +470,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
      */
     public function onPubSubMessage($msg)
     {
-        $this->logger()->info("onPubSubMessage: " . $msg);
+        $this->logger()->debug("onPubSubMessage: " . $msg);
 
         $message = @json_decode($msg);
         if(empty($message) || !isset($message->event) || !isset($message->event_data)){
@@ -450,26 +481,54 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $eventName = $message->event;
         $data = $message->event_data;
 
+        $userId = null;
         $tmp = explode('.', $eventName);
-        $userId = $tmp[count($tmp)-1];
-        $conns = $this->findConnectionsByUserId($userId);
+        if(!preg_match("/\w+\.\d+$/i", $eventName)){
+            $conns = $this->getConnectionsPool();
+            $topic = implode('.',array_slice($tmp, 0, count($tmp)-1));
+        }else{
+            $userId = $tmp[count($tmp)-1];
+            $conns = $this->findConnectionsByUserId($userId);
+            $topic = implode('.',array_slice($tmp, 0, count($tmp)-1));
+            $eventName = $topic;
+        }
         if(empty($conns)){
-            $this->logger()->warning("onPubSubMessage: No connection is found for user: " . $userId);
+            $this->logger()->debug("onPubSubMessage: No connection is found for user: " . ($userId ? $userId : "multicast"));
         }
         if(count($conns) > 0){
-            $this->logger()->info("onPubSubMessage: ".count($conns)." connections for user: " . $userId);
-            $topic = implode('.',array_slice($tmp, 0, count($tmp)-1));
+            if(!empty($userId)){
+                $this->logger()->debug("onPubSubMessage: ".count($conns)." connections for user: " . $userId);
+            }else{
+                $this->logger()->debug("onPubSubMessage: ".count($conns)." connections all connections (multicast)");
+            }
             foreach ($conns as $conn) {
-                if(isset($this->subscriptions[$conn->resourceId][$topic])) {
-                    $this->logger()->debug("onPubSubMessage: Send $topic event message to user: " . $userId . " in connection resourceId: " . $conn->resourceId);
+                $userId = isset($this->users[$conn->resourceId]) ? $this->users[$conn->resourceId]->getId() : "";
+                $isFound = false;
+                if (isset($this->subscriptions[$conn->resourceId])) {
+                    foreach ($this->subscriptions[$conn->resourceId] as $topicPattern => $subscription) {
+                        $pattern = $topicPattern;
+                        if (preg_match("/\w+\.\*$/i", $topicPattern)) {
+                            $tmp = explode('.', $topicPattern);
+                            $pattern = implode('.', array_slice($tmp, 0, count($tmp) - 1));
+                        }
+                        if ($pattern == $topic) {
+                            $topic = $topicPattern;
+                            $isFound = true;
+                            break;
+                        }
+                    }
+                }
+
+                if ($isFound) {
+                    $this->logger()->info("onPubSubMessage: Send $eventName event message to user: " . $userId . " in connection resourceId: " . $conn->resourceId);
                     $resp = new JsonResponseBuilder();
-                    $resp->addCustomElement('event', $topic);
+                    $resp->addCustomElement('event', $eventName);
                     $resp->addCustomElement('subscriptionId', $this->subscriptions[$conn->resourceId][$topic]);
                     $resp->setData($data);
                     $conn->send($resp->result());
                     $resp = null;
-                }else{
-                    $this->logger()->warning("onPubSubMessage: no subscriptions for event $eventName for user $userId and  connection resourceId: " . $conn->resourceId);
+                } else {
+                    $this->logger()->debug("onPubSubMessage: no subscriptions for event $eventName for user $userId and  connection resourceId: " . $conn->resourceId);
                 }
             }
 
