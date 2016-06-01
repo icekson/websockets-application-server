@@ -87,7 +87,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     }
 
     /**
-     * @var null|ConnectionStateChanged[]
+     * @var null|ConnectionStateChanged[]|\SplObjectStorage
      */
     private $connectionStateCallbacks = [];
 
@@ -107,6 +107,8 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $this->pubSub = new AMQPPubSub($config->toArray(), $this->getName());
         $this->rpcQueue = new \ArrayObject();
         $this->rpc = new RPC(RPC::TYPE_REQUEST, $loop, $this, $config->get("name"), $this->getConfiguration()->toArray());
+
+        $this->connectionStateCallbacks = new \SplObjectStorage();
     }
 
     public function getVersion()
@@ -175,6 +177,16 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
             $user = isset($this->users[$connection->resourceId]) ? $this->users[$connection->resourceId] : null;
             $connectionStateCallback->onDisconnected($user);
         }
+    }
+
+    /**
+     * @param ConnectionStateChanged $callback
+     * @return $this
+     */
+    public function registerConnectionStateCallback(ConnectionStateChanged $callback)
+    {
+        $this->connectionStateCallbacks->attach($callback);
+        return $this;
     }
 
     /**
