@@ -509,10 +509,10 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $userId = null;
 
         $eventType = PubSub\Topic::EVENT_TYPE_ADDRESS;
-        if (!preg_match("/\w+\.\*$/i", $eventName)) {
+        if (preg_match("/\w+\.\*$/i", $eventName)) {
             $eventType = PubSub\Topic::EVENT_TYPE_MULTICAST;
         }
-        
+
         $tmp = explode('.', $eventName);
         if ($eventType == PubSub\Topic::EVENT_TYPE_MULTICAST) {
             $conns = $this->getConnectionsPool();
@@ -532,14 +532,16 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                 $this->logger()->debug("onPubSubMessage: " . count($conns) . " connections all connections (multicast)");
             }
             foreach ($conns as $conn) {
+                $subscription = null;
                 $userId = isset($this->users[$conn->resourceId]) ? $this->users[$conn->resourceId]->getId() : "";
                 $isFound = false;
                 if (isset($this->subscriptions[$conn->resourceId])) {
-                    foreach ($this->subscriptions[$conn->resourceId] as $subscribedEvent => $subscription) {
-                        if (preg_match("/\w+\.\*$/i", $subscribedEvent)) {
+                    foreach ($this->subscriptions[$conn->resourceId] as $subscribedEvent => $subscr) {
+                        $subscription = $subscr;
+                        if (preg_match("/\w+\.\*$/", $subscribedEvent)) {
                             $tmp = explode('.', $subscribedEvent);
                             $pattern = implode('.', array_slice($tmp, 0, count($tmp) - 1));
-                            if(preg_match("/$pattern\./", $topic)){
+                            if(preg_match("/$pattern\.[\w\._-]+/", $topic)){
                                 $isFound = true;
                                 break;
                             }
@@ -555,8 +557,8 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                 if ($isFound) {
                     $this->logger()->info("onPubSubMessage: Send $eventName event message to user: " . $userId . " in connection resourceId: " . $conn->resourceId);
                     $resp = new JsonResponseBuilder();
-                    $resp->addCustomElement('event', $eventName);
-                    $resp->addCustomElement('subscriptionId', $this->subscriptions[$conn->resourceId][$topic]);
+                    $resp->addCustomElement('event', preg_replace("/(.*)\.(\*|\d+)/", "$1", $eventName));
+                    $resp->addCustomElement('subscriptionId', $subscription);
                     $resp->setData($data);
                     $conn->send($resp->result());
                     $resp = null;
