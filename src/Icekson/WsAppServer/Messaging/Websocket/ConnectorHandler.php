@@ -12,6 +12,7 @@ use Api\Service\Exception\BadTokenException;
 use Api\Service\Exception\NoTokenException;
 use Api\Service\IdentityInterface;
 use Api\Service\Response\Builder;
+use Api\Service\UserIdentity;
 use Api\Service\Util\Properties;
 use Icekson\Utils\Logger;
 use Icekson\WsAppServer\Config\ConfigAwareInterface;
@@ -136,6 +137,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
      */
     public function onClose(ConnectionInterface $conn)
     {
+        $this->onDisconnected($conn);
         $this->clients->detach($conn);
         if (isset($this->users[$conn->resourceId])) {
             unset($this->users[$conn->resourceId]);
@@ -149,8 +151,6 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                 $this->pubSub->unsubscribe($event, $subscription);
             }
         }
-
-        $this->onDisconnected($conn);
 
     }
 
@@ -240,7 +240,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
             if (empty($identity) || $identity->getId() === null) {
                 throw new BadTokenException("Bad token is given");
             }
-            $this->users[$from->resourceId] = $identity;
+            $this->setIdentity($from, $identity);
 
             $this->logger()->info("new incomming message ({$from->resourceId} ({$from->remoteAddress}:".($identity ? $identity->getId() : "empty")."))" . "; message: " . $msg);
 
@@ -326,6 +326,14 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
             throw $ex;
         }
 
+    }
+
+    private function setIdentity(ConnectionInterface $connection, IdentityInterface $identity)
+    {
+        if(isset($this->users[$connection->resourceId]) && $this->users[$connection->resourceId]->getId() === null && $identity->getId() !== null){
+            $this->onConnected($connection);
+        }
+        $this->users[$connection->resourceId] = $identity;
     }
 
 
