@@ -70,7 +70,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     private $config = null;
 
     private $subscriptions = [];
-    private $name ="websockets-service";
+    private $name = "websockets-service";
 
     /**
      * @var RPC|null
@@ -98,7 +98,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
      * @param LoopInterface $loop
      * @param ConfigureInterface $config
      */
-    public function __construct($name, LoopInterface $loop,ConfigureInterface $config)
+    public function __construct($name, LoopInterface $loop, ConfigureInterface $config)
     {
         $this->name = $name;
         $this->config = $config;
@@ -145,9 +145,9 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         Balancer::getInstance($this->getConfiguration())->detachConnection($this->getName());
         $this->logger()->info("close connection $conn->resourceId ({$conn->remoteAddress}):  " . $this->clients->count() . " connected");
 
-        if(isset($this->subscriptions[$conn->resourceId])){
+        if (isset($this->subscriptions[$conn->resourceId])) {
             $this->logger()->debug("found subscriptions unnesesary subscribtions: " . json_encode($this->subscriptions[$conn->resourceId]) . " unsubscribe");
-            foreach($this->subscriptions[$conn->resourceId] as $event => $subscription){
+            foreach ($this->subscriptions[$conn->resourceId] as $event => $subscription) {
                 $this->pubSub->unsubscribe($event, $subscription);
             }
         }
@@ -242,7 +242,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
             }
             $this->setIdentity($from, $identity);
 
-            $this->logger()->info("new incomming message ({$from->resourceId} ({$from->remoteAddress}:".($identity ? $identity->getId() : "empty")."))" . "; message: " . $msg);
+            $this->logger()->info("new incomming message ({$from->resourceId} ({$from->remoteAddress}:" . ($identity ? $identity->getId() : "empty") . "))" . "; message: " . $msg);
 
             switch ($operation) {
                 case 'subscribe' :
@@ -250,17 +250,18 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                         throw new \InvalidArgumentException("event name parameter is empty");
                     }
 
-                    if(isset($this->subscriptions[$from->resourceId]) && isset($this->subscriptions[$from->resourceId][$event])){
-                        throw new PubSub\Exception\PubSubException("You have already subscribed to event ". $event);
+                    if (isset($this->subscriptions[$from->resourceId]) && isset($this->subscriptions[$from->resourceId][$event])) {
+                        throw new PubSub\Exception\PubSubException("You have already subscribed to event " . $event);
                     }
                     $this->subscriptions[$from->resourceId][$event] = $subscriptionId;
                     $this->logger()->info("Subscribe: " . $this->request->params()->toArray()['event'] . " - " . $subscriptionId);
-                    if($identity) {
+                    if ($identity) {
                         $id = $identity->getId();
-                    }else{
+                    } else {
                         $id = -1;
                     }
-                    $this->pubSub->subscribe($event, $id, new PubSub\Subscriber(function(){}));
+                    $this->pubSub->subscribe($event, $id, new PubSub\Subscriber(function () {
+                    }));
                     $responseBuilder->addCustomElement("subscriptionId", $subscriptionId);
                     $responseBuilder->addCustomElement("subscibed_event", $event);
                     break;
@@ -313,12 +314,12 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
             $responseBuilder->setError($ex->getMessage());
             $this->logger()->warning("Bad token is given: " . $this->request->params()->get('token'));
             $from->send($responseBuilder->result());
-        } catch (\InvalidArgumentException $ex){
+        } catch (\InvalidArgumentException $ex) {
             $responseBuilder->setStatusCode(Builder::STATUS_CODE_ERROR);
             $responseBuilder->setError($ex->getMessage());
             $this->logger()->warning('exception:' . $ex->getMessage());
             $from->send($responseBuilder->result());
-        }catch (\Exception $ex) {
+        } catch (\Exception $ex) {
 
             $responseBuilder->setError($ex->getMessage(), JsonResponseBuilder::ERROR_LEVEL_CRITICAL);
             $from->send($responseBuilder->result());
@@ -331,11 +332,11 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     private function setIdentity(ConnectionInterface $connection, IdentityInterface $identity)
     {
         $isNewOne = false;
-        if((!isset($this->users[$connection->resourceId]) || (isset($this->users[$connection->resourceId]) && $this->users[$connection->resourceId]->getId() === null)) && $identity->getId() !== null){
+        if ((!isset($this->users[$connection->resourceId]) || (isset($this->users[$connection->resourceId]) && $this->users[$connection->resourceId]->getId() === null)) && $identity->getId() !== null) {
             $isNewOne = true;
         }
         $this->users[$connection->resourceId] = $identity;
-        if($isNewOne) {
+        if ($isNewOne) {
             $this->onConnected($connection);
         }
     }
@@ -348,8 +349,8 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     private function findConnectionsByUserId($id)
     {
         $res = [];
-        foreach($this->clients as $conn){
-            if(isset($this->users[$conn->resourceId]) && $this->users[$conn->resourceId]->getId() == $id){
+        foreach ($this->clients as $conn) {
+            if (isset($this->users[$conn->resourceId]) && $this->users[$conn->resourceId]->getId() == $id) {
                 $res[] = $conn;
             }
         }
@@ -363,8 +364,8 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     private function findConnectionsByRequestId($id)
     {
         $res = [];
-        foreach($this->clients as $conn){
-            if(isset($this->rpcQueue[$conn->resourceId]) && in_array($id, $this->rpcQueue[$conn->resourceId])){
+        foreach ($this->clients as $conn) {
+            if (isset($this->rpcQueue[$conn->resourceId]) && in_array($id, $this->rpcQueue[$conn->resourceId])) {
                 $res[] = $conn;
             }
         }
@@ -377,8 +378,8 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
      */
     private function logger()
     {
-        if($this->_logger === null) {
-            $this->_logger = Logger::createLogger( get_class($this). ":" .$this->getName() , $this->config->toArray());
+        if ($this->_logger === null) {
+            $this->_logger = Logger::createLogger(get_class($this) . ":" . $this->getName(), $this->config->toArray());
         }
         return $this->_logger;
     }
@@ -468,9 +469,9 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         foreach ($cons as $conn) {
             $conn->send($resp->serializeToClientFormat());
             $this->logger()->debug("on rpc response: send resp to client: " . $conn->resourceId);
-            if(isset($this->rpcQueue[$conn->resourceId])){
+            if (isset($this->rpcQueue[$conn->resourceId])) {
                 $index = array_search($resp->getRequestId(), $this->rpcQueue[$conn->resourceId]);
-                if($index > -1){
+                if ($index > -1) {
                     unset($this->rpcQueue[$conn->resourceId][$index]);
                 }
             }
@@ -497,7 +498,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $this->logger()->debug("onPubSubMessage: " . $msg);
 
         $message = @json_decode($msg);
-        if(empty($message) || !isset($message->event) || !isset($message->event_data)){
+        if (empty($message) || !isset($message->event) || !isset($message->event_data)) {
             $this->logger()->error("Invalid message received: " . $msg);
             return;
         }
@@ -506,39 +507,47 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $data = $message->event_data;
 
         $userId = null;
-        $tmp = explode('.', $eventName);
-        if(!preg_match("/\w+\.\d+$/i", $eventName)){
-            $conns = $this->getConnectionsPool();
-            $topic = implode('.',array_slice($tmp, 0, count($tmp)-1));
-        }else{
-            $userId = $tmp[count($tmp)-1];
-            $conns = $this->findConnectionsByUserId($userId);
-            $topic = implode('.',array_slice($tmp, 0, count($tmp)-1));
-            $eventName = $topic;
+
+        $eventType = PubSub\Topic::EVENT_TYPE_ADDRESS;
+        if (!preg_match("/\w+\.\*$/i", $eventName)) {
+            $eventType = PubSub\Topic::EVENT_TYPE_MULTICAST;
         }
-        if(empty($conns)){
+        
+        $tmp = explode('.', $eventName);
+        if ($eventType == PubSub\Topic::EVENT_TYPE_MULTICAST) {
+            $conns = $this->getConnectionsPool();
+            $topic = implode('.', array_slice($tmp, 0, count($tmp) - 1));
+        } else {
+            $userId = $tmp[count($tmp) - 1];
+            $conns = $this->findConnectionsByUserId($userId);
+            $topic = implode('.', array_slice($tmp, 0, count($tmp) - 1));
+        }
+        if (empty($conns)) {
             $this->logger()->debug("onPubSubMessage: No connection is found for user: " . ($userId ? $userId : "multicast"));
         }
-        if(count($conns) > 0){
-            if(!empty($userId)){
-                $this->logger()->debug("onPubSubMessage: ".count($conns)." connections for user: " . $userId);
-            }else{
-                $this->logger()->debug("onPubSubMessage: ".count($conns)." connections all connections (multicast)");
+        if (count($conns) > 0) {
+            if (!empty($userId)) {
+                $this->logger()->debug("onPubSubMessage: " . count($conns) . " connections for user: " . $userId);
+            } else {
+                $this->logger()->debug("onPubSubMessage: " . count($conns) . " connections all connections (multicast)");
             }
             foreach ($conns as $conn) {
                 $userId = isset($this->users[$conn->resourceId]) ? $this->users[$conn->resourceId]->getId() : "";
                 $isFound = false;
                 if (isset($this->subscriptions[$conn->resourceId])) {
-                    foreach ($this->subscriptions[$conn->resourceId] as $topicPattern => $subscription) {
-                        $pattern = $topicPattern;
-                        if (preg_match("/\w+\.\*$/i", $topicPattern)) {
-                            $tmp = explode('.', $topicPattern);
+                    foreach ($this->subscriptions[$conn->resourceId] as $subscribedEvent => $subscription) {
+                        if (preg_match("/\w+\.\*$/i", $subscribedEvent)) {
+                            $tmp = explode('.', $subscribedEvent);
                             $pattern = implode('.', array_slice($tmp, 0, count($tmp) - 1));
-                        }
-                        if ($pattern == $topic) {
-                            $topic = $topicPattern;
-                            $isFound = true;
-                            break;
+                            if(preg_match("/$pattern\./", $topic)){
+                                $isFound = true;
+                                break;
+                            }
+                        }else{
+                            if ($subscribedEvent == $topic) {
+                                $isFound = true;
+                                break;
+                            }
                         }
                     }
                 }

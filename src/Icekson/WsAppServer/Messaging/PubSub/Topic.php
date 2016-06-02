@@ -10,6 +10,9 @@ namespace Icekson\WsAppServer\Messaging\PubSub;
 
 class Topic implements TopicInterface
 {
+    const EVENT_TYPE_ADDRESS = "address_event";
+    const EVENT_TYPE_MULTICAST = "multicast_event";
+
     private $name = "";
 
     public function __construct($name)
