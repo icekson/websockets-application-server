@@ -11,7 +11,7 @@ namespace Icekson\WsAppServer;
 use Icekson\WsAppServer\Service\BackendService;
 use Icekson\Utils\Registry;
 use Icekson\WsAppServer\Config\ApplicationConfig;
-use Icekson\WsAppServer\Config\ConfigAwareInterface;
+use Icekson\Config\ConfigAwareInterface;
 use Icekson\Config\ConfigureInterface;
 use Icekson\WsAppServer\LoadBalancer\Balancer;
 use Icekson\WsAppServer\Service\JobsService;

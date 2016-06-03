@@ -8,7 +8,7 @@ namespace Icekson\WsAppServer\Config;
 
 
 use Icekson\Utils\IArrayExchange;
-use Icekson\WsAppServer\Config\Exception;
+use Icekson\Config\Exception;
 use Noodlehaus\ConfigInterface;
 use Noodlehaus\FileParser\Ini;
 use Noodlehaus\FileParser\Json;

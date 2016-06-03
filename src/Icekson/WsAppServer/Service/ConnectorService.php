@@ -9,7 +9,7 @@ namespace Icekson\WsAppServer\Service;
 use Api\Service\IdentityFinderInterface;
 use Icekson\Base\Auth\EmptyIdentityFinder;
 use Icekson\WsAppServer\Application;
-use Icekson\WsAppServer\Config\ConfigAwareInterface;
+use Icekson\Config\ConfigAwareInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
 
 use Icekson\WsAppServer\LoadBalancer\Balancer;

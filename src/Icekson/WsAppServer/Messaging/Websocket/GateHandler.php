@@ -15,7 +15,7 @@ use Api\Service\Response\Builder;
 use Api\Service\Util\Properties;
 use Icekson\Utils\Logger;
 use Icekson\WsAppServer\Config\ApplicationConfig;
-use Icekson\WsAppServer\Config\ConfigAdapter;
+use Icekson\Config\ConfigAdapter;
 use Icekson\Config\ConfigAwareInterface;
 use Icekson\Config\ConfigureInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;

@@ -8,7 +8,7 @@
 namespace IceksonTest\WsAppServer\Config;
 
 
-use Icekson\WsAppServer\Config\ConfigAdapter;
+use Icekson\Config\ConfigAdapter;
 
 class ConfigAdapterTest extends \PHPUnit_Framework_TestCase
 {

@@ -9,7 +9,7 @@ namespace Icekson\WsAppServer\Jobs\Amqp;
 
 
 use Icekson\Utils\Logger;
-use Icekson\WsAppServer\Config\ConfigAdapter;
+use Icekson\Config\ConfigAdapter;
 use Icekson\Config\ConfigAwareInterface;
 use Icekson\Config\ConfigureInterface;
 use Icekson\WsAppServer\Jobs\JobInterface;
