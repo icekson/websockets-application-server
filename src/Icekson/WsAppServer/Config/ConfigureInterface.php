@@ -9,8 +9,6 @@ namespace Icekson\WsAppServer\Config;
 
 use Icekson\Utils\IArrayExchange;
 
-interface ConfigureInterface extends IArrayExchange
+interface ConfigureInterface extends \Icekson\Config\ConfigureInterface
 {
-    public function get($key, $default = null);
-
 }

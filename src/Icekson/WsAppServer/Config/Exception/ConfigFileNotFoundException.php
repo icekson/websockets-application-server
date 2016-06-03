@@ -9,7 +9,5 @@
 namespace Icekson\WsAppServer\Config\Exception;
 
 
-class ConfigFileNotFoundException extends \Exception
-{
-
-}
+class ConfigFileNotFoundException extends \Icekson\Config\Exception\ConfigFileNotFoundException
+{}

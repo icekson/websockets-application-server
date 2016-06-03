@@ -11,13 +11,6 @@ namespace Icekson\WsAppServer\Config;
 
 use Icekson\WsAppServer\Config\ConfigureInterface;
 
-interface ConfigAwareInterface
+interface ConfigAwareInterface extends \Icekson\Config\ConfigAwareInterface
 {
-    /**
-     * @return ConfigureInterface
-     */
-    public function getConfiguration();
-
-    public function setConfiguration(ConfigureInterface $config);
-
 }

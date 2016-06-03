@@ -9,7 +9,6 @@
 namespace Icekson\WsAppServer\Config\Exception;
 
 
-class UnsupportedFormatException extends \Exception
+class UnsupportedFormatException extends \Icekson\Config\Exception\UnsupportedFormatException
 {
-
 }
