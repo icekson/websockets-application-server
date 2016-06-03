@@ -13,13 +13,13 @@
     ],
     "require": {
         "react/react": "^0.4.2",
-        "videlalvaro/php-amqplib": "2.5.*",
+        "videlalvaro/php-amqplib": "2.*.*",
         "cboden/ratchet": "^0.3.3",
         "symfony/process": "^2.7",
         "symfony/console": "^2.7",
         "hassankhan/config": "^0.8.2",
         "monolog/monolog": "^1.17",
-        "icekson/utils": "dev-master",
+        "icekson/utils": "master-dev",
         "icekson/remote-services": "dev-master",
         "bunny/bunny": "v0.2.0",
         "predis/predis": "v1.0.*"
