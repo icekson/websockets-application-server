@@ -8,9 +8,9 @@
 namespace Icekson\WsAppServer\LoadBalancer;
 
 
-use Icekson\WsAppServer\Config\ConfigAdapter;
-use Icekson\WsAppServer\Config\ConfigureInterface;
-use Icekson\WsAppServer\Config\ServiceConfig;
+use Icekson\Config\ConfigAdapter;
+use Icekson\Config\ConfigureInterface;
+use Icekson\Config\ServiceConfig;
 use Icekson\WsAppServer\Exception\ServiceException;
 
 class Balancer

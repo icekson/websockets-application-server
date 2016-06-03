@@ -15,8 +15,8 @@ use Api\Service\Response\Builder;
 use Api\Service\UserIdentity;
 use Api\Service\Util\Properties;
 use Icekson\Utils\Logger;
-use Icekson\WsAppServer\Config\ConfigAwareInterface;
-use Icekson\WsAppServer\Config\ConfigureInterface;
+use Icekson\Config\ConfigAwareInterface;
+use Icekson\Config\ConfigureInterface;
 use Icekson\WsAppServer\LoadBalancer\Balancer;
 use Icekson\WsAppServer\Messaging\Amqp\PubSub as AMQPPubSub;
 

@@ -10,8 +10,8 @@ namespace Icekson\WsAppServer\Jobs\Amqp;
 
 use Icekson\Utils\Logger;
 use Icekson\WsAppServer\Config\ConfigAdapter;
-use Icekson\WsAppServer\Config\ConfigAwareInterface;
-use Icekson\WsAppServer\Config\ConfigureInterface;
+use Icekson\Config\ConfigAwareInterface;
+use Icekson\Config\ConfigureInterface;
 use Icekson\WsAppServer\Jobs\JobInterface;
 use Icekson\WsAppServer\Jobs\TaskChain;
 use PhpAmqpLib\Channel\AMQPChannel;

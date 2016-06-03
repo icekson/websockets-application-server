@@ -10,8 +10,8 @@ namespace Icekson\WsAppServer\Service;
 
 use Icekson\Utils\ParamsBag;
 use Icekson\WsAppServer\Application;
-use Icekson\WsAppServer\Config\ConfigAwareInterface;
-use Icekson\WsAppServer\Config\ConfigureInterface;
+use Icekson\Config\ConfigAwareInterface;
+use Icekson\Config\ConfigureInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Icekson\WsAppServer\Exception\ServiceException;
 use Icekson\Utils\Logger;

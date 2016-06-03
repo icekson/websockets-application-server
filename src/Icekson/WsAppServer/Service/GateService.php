@@ -7,7 +7,7 @@
 namespace Icekson\WsAppServer\Service;
 
 use Icekson\WsAppServer\Application;
-use Icekson\WsAppServer\Config\ConfigureInterface;
+use Icekson\Config\ConfigureInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Icekson\WsAppServer\Messaging\Websocket\GateHandler;
 use Icekson\WsAppServer\Messaging\Websocket\Handler;
