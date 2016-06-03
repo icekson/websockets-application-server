@@ -9,8 +9,6 @@
 namespace Icekson\WsAppServer\Config;
 
 
-use Icekson\WsAppServer\Config\ConfigureInterface;
-
 interface ConfigAwareInterface extends \Icekson\Config\ConfigAwareInterface
 {
 }

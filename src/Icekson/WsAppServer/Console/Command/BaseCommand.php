@@ -7,8 +7,8 @@
 namespace Icekson\WsAppServer\Console\Command;
 
 
-use Icekson\WsAppServer\Config\ConfigAwareInterface;
-use Icekson\WsAppServer\Config\ConfigureInterface;
+use Icekson\Config\ConfigAwareInterface;
+use Icekson\Config\ConfigureInterface;
 use Noodlehaus\ConfigInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
