@@ -16,7 +16,7 @@ require_once __DIR__ . "/../vendor/autoload.php";
 use Symfony\Component\Console\Application;
 
 $conf = ROOT_PATH . "config/server.json";
-$config = (new \Icekson\WsAppServer\Config\ConfigAdapter($conf))->toArray();
+$config = (new \Icekson\Config\ConfigAdapter($conf))->toArray();
 $config = $config['ws-server'];
 $host = $config['amqp']['host'];
 $port = $config['amqp']['port'];

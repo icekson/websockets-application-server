@@ -14,7 +14,7 @@ $configPath = "./config/autoload/";
 if(!defined("CONFIG_PATH")) {
     define("CONFIG_PATH", $configPath);
 }
-$conf = new \Icekson\WsAppServer\Config\ConfigAdapter(PATH_ROOT . $configPath);
+$conf = new \Icekson\Config\ConfigAdapter(PATH_ROOT . $configPath);
 
 $appRunner = new \Icekson\WsAppServer\Console\Command\AppRun();
 $appRunner->setConfiguration($conf);
