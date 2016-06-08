@@ -32,7 +32,7 @@ class GateService extends AbstractService
         $handler = new GateHandler($this->getConfiguration()->getName(), $loop, $this->getConfiguration());
 
         $webSock = new \React\Socket\Server($loop);
-        $webSock->listen($this->getConfiguration()->getPort(), '0.0.0.0');
+        $webSock->listen($this->getConfiguration()->getBindPort(), '0.0.0.0');
         $webServer = new \Ratchet\Server\IoServer(
             new \Ratchet\Http\HttpServer(
                 new \Ratchet\WebSocket\WsServer(
