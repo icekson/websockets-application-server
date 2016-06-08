@@ -53,9 +53,9 @@ class ServiceConfig extends ConfigAdapter
     /**
      * @return int
      */
-    public function getInternalPort()
+    public function getBindPort()
     {
-        $name = $this->get('internal-port', $this->getPort()+1);
+        $name = $this->get('bind_port', $this->getPort()+1);
         return $name;
     }
 

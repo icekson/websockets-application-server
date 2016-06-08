@@ -57,7 +57,7 @@ class ConnectorService extends AbstractService
         });
 
         $webSock = new \React\Socket\Server($loop);
-        $webSock->listen($this->getConfiguration()->getPort(), '0.0.0.0');
+        $webSock->listen($this->getConfiguration()->getBindPort(), '0.0.0.0');
         $webServer = new \Ratchet\Server\IoServer(
             new \Ratchet\Http\HttpServer(
                 new \Ratchet\WebSocket\WsServer(
