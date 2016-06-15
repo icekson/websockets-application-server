@@ -78,7 +78,7 @@ abstract class AbstractService implements ServiceInterface, ConfigAwareInterface
 
         if(function_exists('pcntl_signal')){
             pcntl_signal(SIGTERM, array($this, 'handleSignal'));
-            pcntl_signal(SIGKILL, array($this, 'handleSignal'));
+            pcntl_signal(SIGHUP, array($this, 'handleSignal'));
         }
 
     }
