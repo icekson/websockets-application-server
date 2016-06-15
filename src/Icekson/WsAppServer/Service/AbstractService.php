@@ -209,4 +209,9 @@ abstract class AbstractService implements ServiceInterface, ConfigAwareInterface
     {
         return $this->pubSub->publish($eventName, get_class($this), new ParamsBag($data));
     }
+
+    public function dispose()
+    {
+        
+    }
 }

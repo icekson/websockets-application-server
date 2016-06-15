@@ -50,4 +50,6 @@ interface ServiceInterface
      * @return mixed
      */
     public function publishEvent($eventName, array $data);
+
+    public function dispose();
 }
