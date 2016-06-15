@@ -105,14 +105,6 @@ class Application implements \SplObserver, ConfigAwareInterface
                 $this->logger->error("Init service error: " . $ex->getMessage());
             }
         }
-
-        if(function_exists('pcntl_signal')){
-
-            pcntl_signal(SIGTERM, array($this, 'handleSignal'));
-            pcntl_signal(SIGKILL, array($this, 'handleSignal'));
-        }
-
-
 //        $loop->addPeriodicTimer(5, function() use ($app, $loop){
 //            try {
 //                $this->logger->debug("Loop tick, count of services: " . count($app->services));
@@ -138,16 +130,6 @@ class Application implements \SplObserver, ConfigAwareInterface
 //            }
 //        });
         $loop->run();
-    }
-
-    public function handleSignal($signal)
-    {
-        if(in_array($signal, [SIGTERM, SIGKILL])) {
-            /** @var ServiceInterface $service */
-            foreach ($this->services as $service) {
-                $service->dispose();
-            }
-        }
     }
 
     /**

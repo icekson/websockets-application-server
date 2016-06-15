@@ -75,6 +75,23 @@ abstract class AbstractService implements ServiceInterface, ConfigAwareInterface
         $this->app = $app;
         $this->pubSub = new PubSub($this->getConfiguration()->toArray(), $this->getName());
 
+
+        if(function_exists('pcntl_signal')){
+            pcntl_signal(SIGTERM, array($this, 'handleSignal'));
+            pcntl_signal(SIGKILL, array($this, 'handleSignal'));
+        }
+
+    }
+
+
+    /**
+     * @param $signal
+     */
+    public function handleSignal($signal)
+    {
+        if(in_array($signal, [SIGTERM, SIGKILL])) {
+            $this->dispose();
+        }
     }
 
     /**
@@ -121,6 +138,7 @@ abstract class AbstractService implements ServiceInterface, ConfigAwareInterface
     {
         $this->isRun = false;
         ProcessStarter::getInstance()->stopProcess($this->pid);
+        $this->dispose();
     }
 
 
@@ -212,6 +230,6 @@ abstract class AbstractService implements ServiceInterface, ConfigAwareInterface
 
     public function dispose()
     {
-        
+
     }
 }
