@@ -82,6 +82,17 @@ class PubSubConsumer
 
     }
 
+    public function dispose()
+    {
+        try {
+            $this->channel->close()->then(function(){
+                $this->client->disconnect();
+            });
+        } catch (\Exception $e) {
+
+        }
+    }
+
     /**
      * @param callable $callback
      */

@@ -141,7 +141,7 @@ class ProcessStarter implements \SplSubject
                 }
                 if ($theSame && count($ar) > 1) {
                     $pid = (int)$ar[1];
-                    posix_kill($pid, SIGKILL);
+                    posix_kill($pid, SIGTERM);
                     $stopped = true;
                 }
             }

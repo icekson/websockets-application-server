@@ -20,6 +20,9 @@ use Icekson\WsAppServer\Messaging\Websocket\ConnectorHandler;
 class ConnectorService extends AbstractService
 {
 
+    /**
+     * @var null|PubSubConsumer
+     */
     protected $pubsubConsumer = null;
     /**
      * @var null|RPC
@@ -68,6 +71,12 @@ class ConnectorService extends AbstractService
         );
         Balancer::getInstance($this->getConfiguration())->registerConnector($this->getConfiguration());
         $loop->run();
+    }
+
+    public function dispose()
+    {
+        $this->getLogger()->debug("dispose() called");
+        $this->pubsubConsumer->dispose();
     }
 
 
