@@ -226,8 +226,19 @@ class Application implements \SplObserver, ConfigAwareInterface
             $conf = new ServiceConfig(array_merge($serviceConf, ['amqp' => $amqpConf]));
             $service = $this->initService($conf);
 
-            $pid = null;
-            ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
+            if ($service instanceof BackendService) {
+                $instances = $service->getConfiguration()->get('count', 1);
+                $conf = $conf->toArray();
+                for ($i = 1; $i <= $instances; $i++) {
+                    $conf['name'] = preg_replace("/(\d+)$/", $i, $conf['name']);
+                    $s = $this->initService(new ServiceConfig($conf));
+                    ProcessStarter::getInstance()->stopProccessByCmd($s->getRunCmd());
+                }
+            }else{
+                $pid = null;
+                ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
+            }
+
         }
         $this->isStoped = true;
     }

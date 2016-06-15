@@ -80,6 +80,9 @@ abstract class AbstractService implements ServiceInterface, ConfigAwareInterface
             pcntl_signal(SIGTERM, array($this, 'handleSignal'));
             pcntl_signal(SIGHUP, array($this, 'handleSignal'));
         }
+        $this->getLoop()->addPeriodicTimer(0.1, function(){
+            pcntl_signal_dispatch();
+        });
 
     }
 
@@ -89,8 +92,11 @@ abstract class AbstractService implements ServiceInterface, ConfigAwareInterface
      */
     public function handleSignal($signal)
     {
-        if(in_array($signal, [SIGTERM, SIGKILL])) {
-            $this->dispose();
+        switch ($signal){
+            case SIGTERM :
+                $this->stop();
+                exit;
+                break;
         }
     }
 
