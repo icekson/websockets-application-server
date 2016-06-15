@@ -45,6 +45,7 @@ class PubSubConsumer
      * @var null|LoopInterface
      */
     private $loop = null;
+    private $routingKey = "#";
     /**
      * PubSubConsumer constructor.
      * @param array $config
@@ -52,14 +53,16 @@ class PubSubConsumer
      * @param PubSubListenerInterface $listener
      * @param string $serviceName
      * @param string $exchangeName
+     * @params string $routingKey
      */
-    public function __construct(array $config, LoopInterface $loop, PubSubListenerInterface $listener, $serviceName = 'main-service', $exchangeName = 'pubsub')
+    public function __construct(array $config, LoopInterface $loop, PubSubListenerInterface $listener, $serviceName = 'main-service', $exchangeName = 'pubsub', $routingKey = "#")
     {
         $this->logger = Logger::createLogger(get_class($this), $config);
         $this->serviceName = $serviceName;
         $this->exchangeName = $exchangeName;
         $this->pubSubListener = $listener;
         $this->loop = $loop;
+        $this->routingKey = $routingKey;
 
         $host = $config['amqp']['host'];
         $port = $config['amqp']['port'];
@@ -104,7 +107,7 @@ class PubSubConsumer
             $this->channel = $channel;
             $channel->exchangeDeclare($this->exchangeName, 'topic', false, true, false);
             $channel->queueDeclare($this->exchangeName . "." . $this->serviceName, false, true, false, false);
-            $channel->queueBind($this->exchangeName . "." . $this->serviceName, $this->exchangeName, "#");
+            $channel->queueBind($this->exchangeName . "." . $this->serviceName, $this->exchangeName, $this->routingKey);
             $callback($channel);
         });
     }
