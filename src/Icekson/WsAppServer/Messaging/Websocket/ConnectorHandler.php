@@ -81,6 +81,8 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
 
     private $waitingRpcRequests = [];
 
+    private $waitingRequestsLifetime = 20;
+
     /**
      * @var null|\ArrayObject
      */
@@ -150,7 +152,10 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $this->onDisconnected($conn);
         if(isset($this->rpcQueue[$conn->resourceId])){
             try {
-                $this->waitingRpcRequests[$this->users[$conn->resourceId]->getId()] = $this->rpcQueue[$conn->resourceId];
+                $this->waitingRpcRequests[$this->users[$conn->resourceId]->getId()] = [
+                    'requests' => $this->rpcQueue[$conn->resourceId],
+                    'timestamp' => time()
+                ];
             }catch(\Throwable $ex){}
         }
         $this->clients->detach($conn);
@@ -375,8 +380,11 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
             }
             unset($this->waitingRpcResponses[$identity->getId()]);
         }
+
         if(isset($this->waitingRpcRequests[$identity->getId()])){
-            $this->rpcQueue[$conn->resourceId] = $this->waitingRpcRequests[$identity->getId()];
+            if(time() <= ($this->waitingRpcRequests[$identity->getId()]['timestamp'] + $this->waitingRequestsLifetime)){
+                $this->rpcQueue[$conn->resourceId] = $this->waitingRpcRequests[$identity->getId()];
+            }
             unset($this->waitingRpcRequests[$identity->getId()]);
         }
     }
@@ -542,7 +550,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     'requestId' => $resp->getRequestId(),
                     'response' => $resp
                 ];
-                $this->loop->addTimer(20, function() use ($user, $resp){
+                $this->loop->addTimer($this->waitingRequestsLifetime, function() use ($user, $resp){
                     if(isset($this->waitingRpcResponses[$user->getId()]) && isset($this->waitingRpcResponses[$user->getId()][$resp->getRequestId()])){
                         $this->logger()->debug("timer is exceeded for response with requestId: " . $resp->getRequestId());
                         unset($this->waitingRpcResponses[$user->getId()][$resp->getRequestId()]);
