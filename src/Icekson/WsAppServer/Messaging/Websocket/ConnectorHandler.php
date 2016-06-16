@@ -383,7 +383,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
 
         if(isset($this->waitingRpcRequests[$identity->getId()])){
             if(time() <= ($this->waitingRpcRequests[$identity->getId()]['timestamp'] + $this->waitingRequestsLifetime)){
-                $this->rpcQueue[$conn->resourceId] = $this->waitingRpcRequests[$identity->getId()];
+                $this->rpcQueue[$conn->resourceId] = $this->waitingRpcRequests[$identity->getId()]['requests'];
             }
             unset($this->waitingRpcRequests[$identity->getId()]);
         }
