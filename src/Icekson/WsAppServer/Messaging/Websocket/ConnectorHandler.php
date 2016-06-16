@@ -77,6 +77,8 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
      */
     private $rpc = null;
 
+    private $waitingRpcResponses = [];
+
     private $waitingRpcRequests = [];
 
     /**
@@ -146,11 +148,11 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     public function onClose(ConnectionInterface $conn)
     {
         $this->onDisconnected($conn);
-//        if(isset($this->rpcQueue[$conn->resourceId])){
-//            try {
-//                $this->waitingRpcRequests[$this->users[$conn->resourceId]->getId()] = $this->rpcQueue[$conn->resourceId];
-//            }catch(\Throwable $ex){}
-//        }
+        if(isset($this->rpcQueue[$conn->resourceId])){
+            try {
+                $this->waitingRpcRequests[$this->users[$conn->resourceId]->getId()] = $this->rpcQueue[$conn->resourceId];
+            }catch(\Throwable $ex){}
+        }
         $this->clients->detach($conn);
         if (isset($this->users[$conn->resourceId])) {
             unset($this->users[$conn->resourceId]);
@@ -364,13 +366,17 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
      */
     private function findAndProcessWaitingRequests(IdentityInterface $identity, ConnectionInterface $conn)
     {
-        if(isset($this->waitingRpcRequests[$identity->getId()])){
-            foreach ($this->waitingRpcRequests[$identity->getId()] as $waitingRpcRequest) {
+        if(isset($this->waitingRpcResponses[$identity->getId()])){
+            foreach ($this->waitingRpcResponses[$identity->getId()] as $waitingRpcRequest) {
                 /** @var ResponseInterface $resp */
                 $resp = $waitingRpcRequest['response'];
                 $conn->send($resp->serializeToClientFormat());
                 $this->logger()->debug("waiting RPC response is send to client: " . $conn->resourceId . ", userId: ".$identity->getId());
             }
+            unset($this->waitingRpcResponses[$identity->getId()]);
+        }
+        if(isset($this->waitingRpcRequests[$identity->getId()])){
+            $this->rpcQueue[$conn->resourceId] = $this->waitingRpcRequests[$identity->getId()];
             unset($this->waitingRpcRequests[$identity->getId()]);
         }
     }
@@ -400,25 +406,23 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $res = [];
 
         foreach ($this->rpcQueue as $connectionId =>  $requestData) {
-            if(isset($requestData['requestId']) && $requestData['requestId'] == $id){
-                $connection = null;
-                foreach ($this->clients as $conn) {
-                    if($conn->resourceId == $connectionId){
-                        $connection = $conn;
-                        break;
+            foreach ($requestData as $data) {
+                if(isset($data['requestId']) && $data['requestId'] == $id){
+                    $connection = null;
+                    foreach ($this->clients as $conn) {
+                        if($conn->resourceId == $connectionId){
+                            $connection = $conn;
+                            break;
+                        }
                     }
+                    $res[] = [
+                        'connection' => $connection,
+                        'user' => $data['user']
+                    ];
+                    break;
                 }
-                $res[] = [
-                    'connection' => $connection,
-                    'user' => $requestData['user']
-                ];
-                break;
             }
         }
-        //
-//            if (isset($this->rpcQueue[$conn->resourceId]) && in_array($id, $this->rpcQueue[$conn->resourceId])) {
-//
-//            }
         return $res;
     }
 
@@ -531,17 +535,17 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
             }else{
                 // there is no connection available for such response, so we need to wait for new connection from
                 // particular user for sending response to him
-                if(!isset($this->waitingRpcRequests[$user->getId()])){
-                    $this->waitingRpcRequests[$user->getId()] = [];
+                if(!isset($this->waitingRpcResponses[$user->getId()])){
+                    $this->waitingRpcResponses[$user->getId()] = [];
                 }
-                $this->waitingRpcRequests[$user->getId()][$resp->getRequestId()] = [
+                $this->waitingRpcResponses[$user->getId()][$resp->getRequestId()] = [
                     'requestId' => $resp->getRequestId(),
                     'response' => $resp
                 ];
                 $this->loop->addTimer(20, function() use ($user, $resp){
-                    if(isset($this->waitingRpcRequests[$user->getId()]) && isset($this->waitingRpcRequests[$user->getId()][$resp->getRequestId()])){
+                    if(isset($this->waitingRpcResponses[$user->getId()]) && isset($this->waitingRpcResponses[$user->getId()][$resp->getRequestId()])){
                         $this->logger()->debug("timer is exceeded for response with requestId: " . $resp->getRequestId());
-                        unset($this->waitingRpcRequests[$user->getId()][$resp->getRequestId()]);
+                        unset($this->waitingRpcResponses[$user->getId()][$resp->getRequestId()]);
                     }
                 });
             }
