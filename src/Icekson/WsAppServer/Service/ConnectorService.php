@@ -20,6 +20,8 @@ use Icekson\WsAppServer\Messaging\Websocket\ConnectorHandler;
 class ConnectorService extends AbstractService
 {
 
+    private $pingTimerPeriod = 30;
+
     /**
      * @var null|PubSubConsumer
      */
@@ -39,6 +41,12 @@ class ConnectorService extends AbstractService
         return sprintf("%s scripts/runner.php app:service --type=connector --name='%s' --config-path='%s'", $this->getConfiguration()->get("php_path"), $this->getName(), $this->getConfigPath());
     }
 
+    public function setPingTimerPeriod($sec)
+    {
+        $this->pingTimerPeriod = (int)$sec;
+        return $this;
+    }
+
     public function run()
     {
         $identityFinderClass = $this->getConfiguration()->get("identity_finder_class", "Icekson\\Base\\Auth\\EmptyIdentityFinder");
@@ -55,7 +63,7 @@ class ConnectorService extends AbstractService
         $this->pubsubConsumer = new PubSubConsumer($this->getConfiguration()->toArray(), $loop, $handler, $this->getName());
         $this->pubsubConsumer->consume();
 
-        $loop->addPeriodicTimer(5*60, function() use($handler) {
+        $loop->addPeriodicTimer($this->pingTimerPeriod, function() use($handler) {
             $handler->pingConnections();
         });
 
@@ -75,7 +83,7 @@ class ConnectorService extends AbstractService
 
     public function dispose()
     {
-        $this->getLogger()->debug("dispose() called");
+        $this->getLogger()->debug("connector dispose called");
         $this->pubsubConsumer->dispose();
     }
 
