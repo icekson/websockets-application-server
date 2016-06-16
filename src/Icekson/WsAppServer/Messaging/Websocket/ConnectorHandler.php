@@ -540,6 +540,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                 ];
                 $this->loop->addTimer(20, function() use ($user, $resp){
                     if(isset($this->waitingRpcRequests[$user->getId()]) && isset($this->waitingRpcRequests[$user->getId()][$resp->getRequestId()])){
+                        $this->logger()->debug("timer is exceeded for response with requestId: " . $resp->getRequestId());
                         unset($this->waitingRpcRequests[$user->getId()][$resp->getRequestId()]);
                     }
                 });
