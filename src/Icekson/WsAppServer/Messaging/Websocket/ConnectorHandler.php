@@ -81,6 +81,10 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
 
     private $waitingRpcRequests = [];
 
+    private $waitingEventSubscriptions = [];
+
+    private $waitingEventNotifications = [];
+
     private $waitingRequestsLifetime = 20;
 
     /**
@@ -158,19 +162,27 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                 ];
             }catch(\Throwable $ex){}
         }
+
+        if (isset($this->subscriptions[$conn->resourceId])) {
+            $this->logger()->debug("found subscriptions unnesesary subscribtions: " . json_encode($this->subscriptions[$conn->resourceId]) . " unsubscribe");
+            $userId = $this->users[$conn->resourceId]->getId();
+            $this->waitingEventSubscriptions[$userId] = $this->subscriptions[$conn->resourceId];
+            foreach ($this->subscriptions[$conn->resourceId] as $event => $subscription) {
+                $this->pubSub->unsubscribe($event, $subscription);
+            }
+            $this->loop->addTimer($this->waitingRequestsLifetime, function() use ($conn, $userId){
+                if(isset($this->waitingEventSubscriptions[$userId])){
+                    unset($this->waitingEventSubscriptions[$userId]);
+                }
+            });
+        }
+
         $this->clients->detach($conn);
         if (isset($this->users[$conn->resourceId])) {
             unset($this->users[$conn->resourceId]);
         }
         Balancer::getInstance($this->getConfiguration())->detachConnection($this->getName());
         $this->logger()->info("close connection $conn->resourceId ({$conn->remoteAddress}):  " . $this->clients->count() . " connected");
-
-        if (isset($this->subscriptions[$conn->resourceId])) {
-            $this->logger()->debug("found subscriptions unnesesary subscribtions: " . json_encode($this->subscriptions[$conn->resourceId]) . " unsubscribe");
-            foreach ($this->subscriptions[$conn->resourceId] as $event => $subscription) {
-                $this->pubSub->unsubscribe($event, $subscription);
-            }
-        }
 
     }
 
@@ -269,7 +281,6 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     if (empty($event)) {
                         throw new \InvalidArgumentException("event name parameter is empty");
                     }
-
                     if (isset($this->subscriptions[$from->resourceId]) && isset($this->subscriptions[$from->resourceId][$event])) {
                         throw new PubSub\Exception\PubSubException("You have already subscribed to event " . $event);
                     }
@@ -280,10 +291,11 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     } else {
                         $id = -1;
                     }
-                    $this->pubSub->subscribe($event, $id, new PubSub\Subscriber(function () {
-                    }));
+                    $this->pubSub->subscribe($event, $id, new PubSub\Subscriber(function () {}));
+                    $this->findAndProcessWaitingEventNotifications($identity);
                     $responseBuilder->addCustomElement("subscriptionId", $subscriptionId);
                     $responseBuilder->addCustomElement("subscibed_event", $event);
+
                     break;
                 case 'unsubscribe' :
                     if (empty($event)) {
@@ -386,6 +398,18 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                 $this->rpcQueue[$conn->resourceId] = $this->waitingRpcRequests[$identity->getId()]['requests'];
             }
             unset($this->waitingRpcRequests[$identity->getId()]);
+        }
+    }
+
+    private function findAndProcessWaitingEventNotifications(IdentityInterface $identity)
+    {
+        if(isset($this->waitingEventNotifications[$identity->getId()]) && is_array($this->waitingEventNotifications[$identity->getId()]))
+        {
+            $this->logger()->debug("process waiting event notifications (".count($this->waitingEventNotifications[$identity->getId()]).") for user {$identity->getId()}");
+            foreach ($this->waitingEventNotifications[$identity->getId()] as $msg) {
+                $this->onPubSubMessage($msg);
+            }
+            unset($this->waitingEventNotifications[$identity->getId()]);
         }
     }
 
@@ -649,6 +673,19 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                 }
             }
 
+        }else {
+            if ($userId) {
+                if (isset($this->waitingEventNotifications[$userId]) && !is_array($this->waitingEventNotifications[$userId])) {
+                    $this->waitingEventNotifications[$userId] = [];
+                }
+                $key = md5($msg);
+                $this->waitingEventNotifications[$userId][$key] = $msg;
+                $this->loop->addTimer($this->waitingRequestsLifetime, function () use ($userId, $key) {
+                    if (isset($this->waitingEventNotifications[$userId][$key])) {
+                        unset($this->waitingEventNotifications[$userId][$key]);
+                    }
+                });
+            }
         }
     }
 }
