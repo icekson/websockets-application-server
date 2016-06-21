@@ -1,6 +1,6 @@
 {
     "name": "icekson/ws-app-server", 
-    "version": "v0.9.0",
+    "version": "v0.9.0.1",
     "description": "Scalable websocket server",
     "license": "MIT",
     "type": "library",
@@ -37,7 +37,7 @@
     },
     "extra": {
         "branch-alias": {
-            "stable": "0.9.0"
+            "stable": "0.9.0.*"
         }
     }
 }
