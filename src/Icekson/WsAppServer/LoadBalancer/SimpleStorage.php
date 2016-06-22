@@ -89,4 +89,10 @@ class SimpleStorage implements StorageInterface
     {
         return $this->services;
     }
+
+    public function reset()
+    {
+        $this->counts = [];
+        $this->services = [];
+    }
 }

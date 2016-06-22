@@ -19,4 +19,7 @@ interface StorageInterface
     public function persistAvailableConnectors(array $services);
 
     public function retrieveAvailableConnectors();
+
+    public function reset();
+
 }
