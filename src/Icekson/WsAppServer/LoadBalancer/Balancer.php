@@ -41,6 +41,11 @@ class Balancer
     private function __construct(ConfigureInterface $config)
     {
         $this->storage = new RedisStorage($config);
+        try{
+            $this->reset();
+        }catch(\Throwable $ex){
+            $this->storage = new SimpleStorage($config);
+        }
     }
 
     /**
