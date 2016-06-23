@@ -41,11 +41,25 @@ class Balancer
     private function __construct(ConfigureInterface $config)
     {
         $this->storage = new RedisStorage($config);
+
+       if(!$this->check()){
+           $this->storage = new SimpleStorage($config);
+       }
+
+    }
+
+    /**
+     * @return boolean
+     */
+    private function check()
+    {
+        $res = true;
         try{
-            $this->reset();
+            $this->storage->geCountOfConnections('test');
         }catch(\Throwable $ex){
-            $this->storage = new SimpleStorage($config);
+            $res = false;
         }
+        return $res;
     }
 
     /**
