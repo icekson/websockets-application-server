@@ -48,19 +48,6 @@ class Balancer
 
     }
 
-    /**
-     * @return boolean
-     */
-    private function check()
-    {
-        $res = true;
-        try{
-            $this->storage->geCountOfConnections('test');
-        }catch(\Throwable $ex){
-            $res = false;
-        }
-        return $res;
-    }
 
     /**
      * @param ServiceConfig $service
