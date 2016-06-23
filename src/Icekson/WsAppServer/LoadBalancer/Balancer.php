@@ -42,8 +42,8 @@ class Balancer
     {
         $this->storage = new RedisStorage($config);
 
-       if(!$this->check()){
-           $this->storage = new SimpleStorage($config); 
+       if(!$this->storage->check()){
+           $this->storage = new SimpleStorage($config);
        }
 
     }

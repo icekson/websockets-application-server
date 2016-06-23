@@ -190,4 +190,15 @@ class RedisStorage implements StorageInterface
         $this->saveServicesInfo($info);
     }
 
+    public function check()
+    {
+        $res = true;
+        try{
+            $this->redis->set('test',"test");
+        }catch (\Throwable $ex){
+            $res = false;
+        }
+        return $res;
+    }
+
 }
