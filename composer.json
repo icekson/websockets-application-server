@@ -4,7 +4,7 @@
     "description": "Scalable websocket server",
     "license": "MIT",
     "type": "library",
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "authors": [
         {
             "name": "Alexey Itsekson",
@@ -37,7 +37,7 @@
     },
     "extra": {
         "branch-alias": {
-            "stable": "0.9.0.*"
+            "dev-master": "1.0.x-dev"
         }
     }
 }
