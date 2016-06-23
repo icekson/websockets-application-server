@@ -142,7 +142,7 @@ class Application implements \SplObserver, ConfigAwareInterface
         }
         $loop = $this->loop;
         ProcessStarter::getInstance($loop);
-        $cmd = sprintf("%s scripts/runner.php app-server:start --config-path='%s'", $this->getConfiguration()->get("script_php_path"), $configPath);
+        $cmd = sprintf("%s scripts/runner.php app-server:start --config-path='%s'", $this->getConfiguration()->get("script_php_path", 'php'), $configPath);
         $res = ProcessStarter::getInstance()->checkProcessByCmd($cmd);
         if (!$res) {
             $needToRestart = false;
