@@ -269,7 +269,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         try {
 
             $identity = $this->getIdentity(new Properties($this->request->params()->toArray()));
-            if (empty($identity) || $identity->getId() === null) {
+            if (empty($identity)) {
                 throw new BadTokenException("Bad token is given");
             }
             $this->setIdentity($from, $identity);
