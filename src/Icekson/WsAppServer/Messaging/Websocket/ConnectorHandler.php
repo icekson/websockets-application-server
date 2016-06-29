@@ -367,7 +367,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     private function setIdentity(ConnectionInterface $connection, IdentityInterface $identity)
     {
         $isNewOne = false;
-        if ((!isset($this->users[$connection->resourceId]) || (isset($this->users[$connection->resourceId]) && $this->users[$connection->resourceId]->getId() === null)) && $identity->getId() !== null) {
+        if ($identity->getId() > 0 && (!isset($this->users[$connection->resourceId]) || (isset($this->users[$connection->resourceId]) && $this->users[$connection->resourceId]->getId() === null)) && $identity->getId() !== null) {
             $isNewOne = true;
         }
         $this->users[$connection->resourceId] = $identity;
