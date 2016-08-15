@@ -10,7 +10,9 @@ namespace Icekson\WsAppServer\Messaging\AmqpAsync;
 
 use Bunny\Async\Client;
 use Bunny\Channel;
+use Bunny\Exception\BunnyException;
 use Bunny\Message;
+use Bunny\Protocol\MethodQueueDeclareOkFrame;
 use Icekson\WsAppServer\Service\Support\PubSubListenerInterface;
 use PhpAmqpLib\Message\AMQPMessage;
 use Psr\Log\LoggerInterface;
@@ -18,7 +20,7 @@ use Icekson\Utils\Logger;
 use React\EventLoop\LoopInterface;
 use React\Promise\Promise;
 
-class PubSubConsumer
+class LogsMonitorConsumer
 {
 
     /**
@@ -30,12 +32,9 @@ class PubSubConsumer
      */
     private $client = null;
 
-    private $serviceName = 'main-service';
-    private $exchangeName = 'pubsub';
-    /**
-     * @var null|LoggerInterface
-     */
-    private $logger = null;
+    private $queueName = 'monitor-logs';
+    private $exchangeName = 'monitor-log';
+
     /**
      * @var PubSubListenerInterface|null
      */
@@ -55,11 +54,9 @@ class PubSubConsumer
      * @param string $exchangeName
      * @params string $routingKey
      */
-    public function __construct(array $config, LoopInterface $loop, PubSubListenerInterface $listener, $serviceName = 'main-service', $exchangeName = 'pubsub', $routingKey = "#")
+    public function __construct(array $config, LoopInterface $loop, PubSubListenerInterface $listener, $routingKey = "#",$queueName = "monitor-logs")
     {
-        $this->logger = Logger::createLogger(get_class($this), $config);
-        $this->serviceName = $serviceName;
-        $this->exchangeName = $exchangeName;
+
         $this->pubSubListener = $listener;
         $this->loop = $loop;
         $this->routingKey = $routingKey;
@@ -76,7 +73,7 @@ class PubSubConsumer
             'user' => $user,
             'password' => $password,
             'vhost' => $vhost
-        ], Logger::createLogger("AmqpClient"));
+        ]);
 
         //$this->initConnection();
 
@@ -98,9 +95,8 @@ class PubSubConsumer
      */
     private function initConnection(callable $callback)
     {
-        $this->logger->debug("init connection");
+
         if (!$this->client->isConnected()) {
-            $this->logger->debug("amqp connection is closed, connect...");
             $promise = $this->client->connect();
         } else {
             $promise = \React\Promise\all([function () {
@@ -108,17 +104,13 @@ class PubSubConsumer
             }]);
         }
 
-
-
         $promise->then(function (Client $client) {
-            $this->logger->debug("connection established");
             return $client->channel();
         })->then(function (Channel $channel) use($callback){
-            $this->logger->debug("init channel");
             $this->channel = $channel;
             $channel->exchangeDeclare($this->exchangeName, 'topic', false, true, false);
-            $channel->queueDeclare($this->exchangeName . "." . $this->serviceName, false, true, false, false);
-            $channel->queueBind($this->exchangeName . "." . $this->serviceName, $this->exchangeName, $this->routingKey);
+            $channel->queueDeclare($this->queueName, false, true, false, true);
+            $channel->queueBind($this->queueName, $this->exchangeName, $this->routingKey);
             $callback($channel);
         });
     }
@@ -139,26 +131,23 @@ class PubSubConsumer
      */
     public function consume()
     {
-        $this->logger->debug("start pubsub consumer");
         $callback = function(Channel $channel){
-            return $channel->consume([$this, 'proccessMsg'], $this->exchangeName . "." . $this->serviceName, '', false, false, false, false);
+            return $channel->consume([$this, 'proccessMsg'], $this->queueName, '', false, false, false, false);
         };
         $this->initConnection($callback);
     }
 
     public function proccessMsg(Message $msg)
     {
-        $this->logger->debug("new pubsub message consumed");
         $consumer = $this;
-        $routingKey = $msg->routingKey;
+        $routingKey = "log." . $msg->routingKey;
         $message = '{"event": "' . $routingKey . '", "event_data": ' . $msg->content . '}';
         $socket = null;
         try {
             $this->pubSubListener->onPubSubMessage($message);
             $consumer->channel->ack($msg);
-            $this->logger->debug("pubsub message processed");
         } catch (\Exception $ex) {
-            $consumer->channel->nack($msg);
+            $consumer->channel->ack($msg);
             throw $ex;
         }
     }
