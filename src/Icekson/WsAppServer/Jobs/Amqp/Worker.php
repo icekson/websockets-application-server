@@ -148,7 +148,7 @@ class Worker implements ConfigAwareInterface
                     $consumer->channel->basic_nack($msg->delivery_info['delivery_tag']);
                 }
             }
-        }catch(\Throwable $ex){
+        }catch(\Exception $ex){
             $this->channel->basic_nack($msg->delivery_info['delivery_tag']);
             $this->logger->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
         }

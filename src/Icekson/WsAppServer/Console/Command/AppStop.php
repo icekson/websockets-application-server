@@ -49,7 +49,7 @@ class AppStop extends BaseCommand
             $appConfig = new ApplicationConfig(PATH_ROOT . $configPath);
             $app = new Application($appConfig);
             $app->stop();
-        }catch (\Throwable $ex){
+        }catch (\Exception $ex){
             $this->logger()->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
         }
 

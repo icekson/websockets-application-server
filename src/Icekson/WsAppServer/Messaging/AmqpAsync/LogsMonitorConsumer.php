@@ -85,7 +85,7 @@ class LogsMonitorConsumer
             $this->channel->close()->then(function(){
                 $this->client->disconnect();
             });
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
 
         }
     }
@@ -121,7 +121,7 @@ class LogsMonitorConsumer
             $this->channel->close()->then(function(){
                 $this->client->disconnect();
             });
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
 
         }
     }
@@ -139,8 +139,8 @@ class LogsMonitorConsumer
 
     public function proccessMsg(Message $msg)
     {
-        $consumer = $this;
-        $routingKey = "log." . $msg->routingKey;
+        $consumer = $this;        
+		$routingKey = "log." . preg_replace("/[\/\\\]+/", ".", $msg->routingKey);
         $message = '{"event": "' . $routingKey . '", "event_data": ' . $msg->content . '}';
         $socket = null;
         try {

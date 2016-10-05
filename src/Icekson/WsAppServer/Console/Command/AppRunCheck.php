@@ -49,7 +49,7 @@ class AppRunCheck extends BaseCommand
             $appConfig = new ApplicationConfig(PATH_ROOT . $configPath);
             $app = new Application($appConfig);
             $app->check($configPath);
-        }catch (\Throwable $ex){
+        }catch (\Exception $ex){
             $this->logger()->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
         }
 

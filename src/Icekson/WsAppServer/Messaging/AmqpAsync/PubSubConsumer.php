@@ -88,7 +88,7 @@ class PubSubConsumer
             $this->channel->close()->then(function(){
                 $this->client->disconnect();
             });
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
 
         }
     }
@@ -129,7 +129,7 @@ class PubSubConsumer
             $this->channel->close()->then(function(){
                 $this->client->disconnect();
             });
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
 
         }
     }

@@ -69,7 +69,7 @@ class ServiceRun extends BaseCommand
             $app = new Application($appConf);
             $app->runService($name, $type, $routingKey);
 
-        }catch (\Throwable $ex){
+        }catch (\Exception $ex){
             $this->logger()->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
         }
         $executionTime = gmdate("H:i:s", time() - $start);

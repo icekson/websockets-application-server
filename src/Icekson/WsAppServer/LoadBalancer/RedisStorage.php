@@ -195,7 +195,7 @@ class RedisStorage implements StorageInterface
         $res = true;
         try{
             $this->redis->set('test',"test");
-        }catch (\Throwable $ex){
+        }catch (\Exception $ex){
             $res = false;
         }
         return $res;

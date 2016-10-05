@@ -51,7 +51,7 @@ class AppRun extends BaseCommand
             $appConfig = new ApplicationConfig($configPath);
             $app = new Application($appConfig);
             $app->start();
-        }catch (\Throwable $ex){
+        }catch (\Exception $ex){
             $this->logger()->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
         }
 

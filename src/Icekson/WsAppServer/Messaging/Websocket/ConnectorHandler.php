@@ -160,7 +160,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     'requests' => $this->rpcQueue[$conn->resourceId],
                     'timestamp' => time()
                 ];
-            }catch(\Throwable $ex){}
+            }catch(\Exception $ex){}
         }
 
         if (isset($this->subscriptions[$conn->resourceId])) {

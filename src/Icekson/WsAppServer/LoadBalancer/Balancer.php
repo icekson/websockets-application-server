@@ -40,7 +40,11 @@ class Balancer
 
     private function __construct(ConfigureInterface $config)
     {
-        $this->storage = new RedisStorage($config);
+        try {
+            $this->storage = new RedisStorage($config);
+        }catch (\Exception $ex){
+            $this->storage = new SimpleStorage($config);
+        }
 
        if(!$this->storage->check()){
            $this->storage = new SimpleStorage($config);
