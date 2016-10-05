@@ -36,8 +36,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-master": "1.0.x-dev",
-            "dev-php5": "1.0.x-php5-dev"
+            "dev-php5": "1.0.x-dev"
         }
     }
 }
