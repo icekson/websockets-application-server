@@ -165,16 +165,19 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
 
         if (isset($this->subscriptions[$conn->resourceId])) {
             $this->logger()->debug("found subscriptions unnesesary subscribtions: " . json_encode($this->subscriptions[$conn->resourceId]) . " unsubscribe");
-            $userId = $this->users[$conn->resourceId]->getId();
-            $this->waitingEventSubscriptions[$userId] = $this->subscriptions[$conn->resourceId];
-            foreach ($this->subscriptions[$conn->resourceId] as $event => $subscription) {
-                $this->pubSub->unsubscribe($event, $subscription);
-            }
-            $this->loop->addTimer($this->waitingRequestsLifetime, function() use ($conn, $userId){
-                if(isset($this->waitingEventSubscriptions[$userId])){
-                    unset($this->waitingEventSubscriptions[$userId]);
+            $identity = $this->users[$conn->resourceId];
+            if($identity !== null) {
+                $userId = $identity->getId();
+                $this->waitingEventSubscriptions[$userId] = $this->subscriptions[$conn->resourceId];
+                foreach ($this->subscriptions[$conn->resourceId] as $event => $subscription) {
+                    $this->pubSub->unsubscribe($event, $subscription);
                 }
-            });
+                $this->loop->addTimer($this->waitingRequestsLifetime, function () use ($conn, $userId) {
+                    if (isset($this->waitingEventSubscriptions[$userId])) {
+                        unset($this->waitingEventSubscriptions[$userId]);
+                    }
+                });
+            }
         }
 
         $this->clients->detach($conn);
