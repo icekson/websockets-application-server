@@ -354,7 +354,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
             $responseBuilder->setError($ex->getMessage());
             $this->logger()->warning('exception:' . $ex->getMessage());
             $from->send($responseBuilder->result());
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
 
             $responseBuilder->setError($ex->getMessage(), JsonResponseBuilder::ERROR_LEVEL_CRITICAL);
             $from->send($responseBuilder->result());

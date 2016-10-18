@@ -157,7 +157,7 @@ class PubSubConsumer
             $this->pubSubListener->onPubSubMessage($message);
             $consumer->channel->ack($msg);
             $this->logger->debug("pubsub message processed");
-        } catch (\Exception $ex) {
+        } catch (\Throwable $ex) {
             $consumer->channel->nack($msg);
             throw $ex;
         }

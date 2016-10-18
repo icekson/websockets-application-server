@@ -96,8 +96,24 @@ class Application implements \SplObserver, ConfigAwareInterface
                         $this->services[$s->getPid()] = $s;
                     }
                 } else {
-                    $service->startAsProcess();
-                    $this->services[$service->getPid()] = $service;
+                    $instances = $service->getConfiguration()->get('servers', null);
+                    if($instances === null){
+                        $instances = $service->getConfiguration()->get('workers', null);
+                    }
+                    $confAsArray = $conf->toArray();
+                    if($instances === null){
+                        $s = $this->initService($conf);
+                        $s->startAsProcess();
+                        $this->services[$s->getPid()] = $s;
+                    }else {
+                        foreach ($instances as $i => $instanceConf) {
+                            $confAsArray['name'] = preg_replace("/(\d+)$/", ($i + 1), $confAsArray['name']);
+                            $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf));
+                            $s = $this->initService($conf);
+                            $s->startAsProcess();
+                            $this->services[$s->getPid()] = $s;
+                        }
+                    }
                 }
 
 
@@ -236,7 +252,25 @@ class Application implements \SplObserver, ConfigAwareInterface
                 }
             }else{
                 $pid = null;
-                ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
+                $confAsArray = $conf->toArray();
+                $instances = $service->getConfiguration()->get('servers', null);
+                if($instances === null){
+                    $instances = $service->getConfiguration()->get('workers', null);
+                }
+
+                if($instances === null){
+                    $service = $this->initService($conf);
+                    ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
+                }else {
+                    foreach ($instances as $i => $instanceConf) {
+                        $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf));
+                        $service = $this->initService($conf);
+                        ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
+                    }
+                }
+
+//                $pid = null;
+//                ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
             }
 
         }
