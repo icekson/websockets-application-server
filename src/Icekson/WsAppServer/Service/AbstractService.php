@@ -134,7 +134,7 @@ abstract class AbstractService implements ServiceInterface, ConfigAwareInterface
             $this->isRun = true;
             $this->run();
         } catch (\Throwable $ex) {
-            $this->getLogger()->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
+            $this->getLogger()->error($ex->getMessage() . "- " .$ex->getFile() . ":" . $ex->getLine() .  "\n" . $ex->getTraceAsString());
             $this->isRun = false;
         }
     }
