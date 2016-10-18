@@ -53,10 +53,10 @@
       },
       "jobs-service": {
         "php_path": "php",
+        "name": "jobs-service",
         "class": "Icekson\\WsAppServer\\Service\\JobsService",
         "workers": [
           {
-            "name": "jobs-service-main",
             "routing_key": "main",
             "count": 5
           }

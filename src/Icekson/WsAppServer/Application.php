@@ -107,7 +107,8 @@ class Application implements \SplObserver, ConfigAwareInterface
                         $this->services[$s->getPid()] = $s;
                     }else {
                         foreach ($instances as $i => $instanceConf) {
-                            $confAsArray['name'] = preg_replace("/(\d+)$/", ($i + 1), $instanceConf['name']);
+                            $name = isset($confAsArray['name']) ? $confAsArray['name']: $instanceConf['name'];
+                            $confAsArray['name'] = isset($instanceConf['routing_key']) ? $name . "-" .$instanceConf['routing_key'] : $name . "-" . ($i + 1);
                             $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf));
                             $s = $this->initService($conf);
                             $s->startAsProcess();
