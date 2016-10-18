@@ -8,6 +8,7 @@
 namespace Icekson\WsAppServer;
 
 
+use Api\Service\Annotation\Service;
 use Icekson\WsAppServer\Service\BackendService;
 use Icekson\Utils\Registry;
 use Icekson\WsAppServer\Config\ApplicationConfig;
@@ -73,83 +74,22 @@ class Application implements \SplObserver, ConfigAwareInterface
     {
         $this->logger->info("Start WsAppServer");
 
-        $amqpConf = $this->config->get('amqp', []);
         $servicesConfig = $this->config->getServicesConfig();
 //        var_export($servicesConfig);exit;
         $loop = $this->loop;
         $this->loop = $loop;
         ProcessStarter::getInstance($loop);
         Balancer::getInstance($this->getConfiguration())->reset();
-        foreach ($servicesConfig as $serviceConf) {
-            try {
 
-                /** @var ServiceConfig $conf */
-                $conf = new ServiceConfig(array_merge($serviceConf, ['amqp' => $amqpConf]));
-                $service = $this->initService($conf);
-                if ($service instanceof BackendService) {
-                    $instances = $service->getConfiguration()->get('count', 1);
-                    $conf = $conf->toArray();
-                    for ($i = 1; $i <= $instances; $i++) {
-                        $conf['name'] = preg_replace("/(\d+)$/", $i, $conf['name']);
-                        $s = $this->initService(new ServiceConfig($conf));
-                        $s->startAsProcess();
-                        $this->services[$s->getPid()] = $s;
-                    }
-                } else {
-                    $instances = $service->getConfiguration()->get('servers', null);
-                    if($instances === null){
-                        $instances = $service->getConfiguration()->get('workers', null);
-                    }
-                    $confAsArray = $conf->toArray();
-                    if($instances === null){
-                        $s = $this->initService($conf);
-                        $s->startAsProcess();
-                        $this->services[$s->getPid()] = $s;
-                    }else {
-                        foreach ($instances as $i => $instanceConf) {
-                            $name = isset($confAsArray['name']) ? $confAsArray['name']: $instanceConf['name'];
-                            $name = $name . "-" .(isset($instanceConf['routing_key']) ? $instanceConf['routing_key'] : ($i + 1));
-                            $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf, ["name" => $name]));
-                            $count = $service->getConfiguration()->get('count', 1);
-                            for ($j = 1; $j <= $count; $j++) {
-                                $conf['name'] = $conf['name'] . "-" . $j;
-                                $s = $this->initService(new ServiceConfig($conf));
-                                $s->startAsProcess();
-                                $this->services[$s->getPid()] = $s;
-                            }
-                        }
-                    }
-                }
+        $serviceConfigs = $this->parseServicesConfig($servicesConfig);
 
+        /** @var ServiceInterface $service */
+        foreach ($serviceConfigs as $serviceConf) {
+            $service = $this->initService($serviceConf);
+            $service->startAsProcess();
+            $this->services[$service->getPid()] = $service;
 
-            } catch (ServiceException $ex) {
-                $this->logger->error("Init service error: " . $ex->getMessage());
-            }
         }
-//        $loop->addPeriodicTimer(5, function() use ($app, $loop){
-//            try {
-//                $this->logger->debug("Loop tick, count of services: " . count($app->services));
-//                if ($app->isStoped) {
-//
-//                    $app->logger->info("Count of run services: " . count($this->services));
-//
-//                    /** @var ServiceInterface $service */
-//                    foreach ($app->services as $service) {
-//                        $res = $service->stop();
-//                        if ($res) {
-//                            $app->logger->info(sprintf("Service pid:%s %s succssfully stoped.", $service->getPid(), $service->getName()));
-//                        } else {
-//                            $app->logger->warning(sprintf("Service pid:%s %s isn't run", $service->getPid(), $service->getName()));
-//                        }
-//                    }
-//                    $app->services = [];
-//                    $app->logger->info("All services are stoped. Application exit...");
-//                    $loop->stop();
-//                }
-//            }catch (\Exception $ex){
-//                $app->logger->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
-//            }
-//        });
         $loop->run();
     }
 
@@ -167,20 +107,19 @@ class Application implements \SplObserver, ConfigAwareInterface
         $res = ProcessStarter::getInstance()->checkProcessByCmd($cmd);
         if (!$res) {
             $needToRestart = false;
-            $amqpConf = $this->config->get('amqp', []);
             $servicesConfig = $this->config->getServicesConfig();
-            foreach ($servicesConfig as $serviceConf) {
 
-                /** @var ServiceConfig $conf */
-                $conf = new ServiceConfig(array_merge($serviceConf, ['amqp' => $amqpConf]));
-                $service = $this->initService($conf);
-                $_cmd = $service->getRunCmd();
+            $services = $this->parseServicesConfig($servicesConfig);
+            foreach ($services as $service) {
+                $s = $this->initService($service);
+                $_cmd = $s->getRunCmd();
                 $r = ProcessStarter::getInstance()->checkProcessByCmd($_cmd);
                 if (!$r) {
                     $needToRestart = true;
                     break;
                 }
             }
+
             if ($needToRestart) {
                 $this->_runCommand($cmd);
             }
@@ -208,44 +147,24 @@ class Application implements \SplObserver, ConfigAwareInterface
      */
     public function runService($name, $type, $routingKey = null)
     {
-        $services = $this->getConfiguration()->getServicesConfig();
+        $services = $this->parseServicesConfig($this->getConfiguration()->getServicesConfig());
         $serviceConfig = null;
         // find needed service inside config
+//        $tmp = [];
         foreach ($services as $key => $serviceConf) {
-            $workersInstances = [];
-            if(isset($serviceConf['workers'])){
-                $workersInstances = $serviceConf['workers'];
-            }else if (isset($serviceConf['servers'])){
-                $workersInstances = $serviceConf['servers'];
+//            $tmp[] = $serviceConf->getName();
+            if($serviceConf->getName() == $name){
+                $serviceConfig = $serviceConf;
+                break;
             }
-            if(count($workersInstances) > 0){
-                foreach ($workersInstances as $i => $workersInstance) {
-                    $serviceNameKey = isset($serviceConf['name']) ? ($serviceConf['name'] . "-" .(isset($workersInstance['routing_key']) ? $workersInstance['routing_key'] : ($i+1))) : (isset($workersInstance['name']) ? $workersInstance['name'] : null);
-                    if($serviceNameKey === null){
-                        continue;
-                    }
-                    if($name == $serviceNameKey){
-                        $conf = array_replace_recursive($serviceConf, $workersInstance);
-                        $serviceConfig = $conf;
-                        break;
-                    }
-                }
-            }else{
-                $serviceNameKey = isset($serviceConf['name']) ? $serviceConf['name']: null;
-                if ($serviceNameKey && $serviceNameKey == $name) {
-                    $serviceConfig = $serviceConf;
-                    break;
-                }
-            }
-
         }
+//        $this->logger->notice(var_export($tmp, true));exit;
 
         if (empty($serviceConfig)) {
             throw new ServiceException("Service with name '$name' is not found");
         }
 
-
-        $service = $this->initService(new ServiceConfig(array_replace_recursive($this->getConfiguration()->toArray(), $serviceConfig)));
+        $service = $this->initService(new ServiceConfig(array_replace_recursive($this->getConfiguration()->toArray(), $serviceConfig->toArray())));
         if ($service instanceof JobsService) {
             $service->setRoutingKey($routingKey);
         }
@@ -258,55 +177,9 @@ class Application implements \SplObserver, ConfigAwareInterface
         $this->logger->debug("Stop application");
         $loop = $this->loop;
         ProcessStarter::getInstance($loop);
-
-        $amqpConf = $this->config->get('amqp', []);
-        $servicesConfig = $this->config->getServicesConfig();
-        foreach ($servicesConfig as $serviceConf) {
-
-            /** @var ServiceConfig $conf */
-            $conf = new ServiceConfig(array_merge($serviceConf, ['amqp' => $amqpConf]));
-            $service = $this->initService($conf);
-
-            if ($service instanceof BackendService) {
-                $instances = $service->getConfiguration()->get('count', 1);
-                $conf = $conf->toArray();
-                for ($i = 1; $i <= $instances; $i++) {
-                    $conf['name'] = preg_replace("/(\d+)$/", $i, $conf['name']);
-                    $s = $this->initService(new ServiceConfig($conf));
-                    ProcessStarter::getInstance()->stopProccessByCmd($s->getRunCmd());
-                }
-            }else{
-                $pid = null;
-                $confAsArray = $conf->toArray();
-                $instances = $service->getConfiguration()->get('servers', null);
-                if($instances === null){
-                    $instances = $service->getConfiguration()->get('workers', null);
-                }
-
-                if($instances === null){
-                    $service = $this->initService($conf);
-                    ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
-                }else {
-                    foreach ($instances as $i => $instanceConf) {
-                        $name = isset($confAsArray['name']) ? $confAsArray['name']: $instanceConf['name'];
-                        $name = $name . "-" .(isset($instanceConf['routing_key']) ? $instanceConf['routing_key'] : ($i + 1));
-                        $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf, ["name" => $name]));
-                        $count = $service->getConfiguration()->get('count', 1);
-                        $conf = $conf->toArray();
-                        for ($j = 1; $j <= $count; $j++) {
-                            $conf['name'] = $conf['name'] . "-" . $j;
-                            $service = $this->initService($conf);
-                            ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
-                        }
-
-                    }
-                }
-
-//                $pid = null;
-//                ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
-            }
-
-        }
+        $services = $this->getConfiguration()->getServicesConfig();
+        $phpCmd = $services[0]->get('php_path', 'php');
+        ProcessStarter::getInstance()->runNewProcess(sprintf("kill -9 `ps -ef | grep '%s scripts/runner.php app:service' | grep -v grep | awk '{print $2}'`", $phpCmd));
         $this->isStoped = true;
     }
 
@@ -356,6 +229,64 @@ class Application implements \SplObserver, ConfigAwareInterface
     public function getLoop()
     {
         return $this->loop;
+    }
+
+    private function parseServicesConfig($servicesConfig)
+    {
+        $amqpConf = $this->getConfiguration()->get('amqp', []);
+        $services = [];
+        foreach ($servicesConfig as $serviceConf) {
+            try {
+
+                /** @var ServiceConfig $conf */
+                $conf = new ServiceConfig(array_merge($serviceConf, ['amqp' => $amqpConf]));
+                $service = $this->initService($conf);
+                $instances = $service->getConfiguration()->get('servers', null);
+                if($instances === null){
+                    $instances = $service->getConfiguration()->get('workers', null);
+                }
+                $confAsArray = $conf->toArray();
+                unset($confAsArray['workers']);
+                unset($confAsArray['servers']);
+                if($instances === null){
+                    // $s = $this->initService($conf);
+                    $name = isset($confAsArray['name']) ? $confAsArray['name']: null;
+                    if($name !== null) {
+                        $name = $name . (isset($confAsArray['routing_key']) ? ("-" . $confAsArray['routing_key']) : "");
+                        $count = $service->getConfiguration()->get('count', null);
+                        if($count !== null) {
+                            for ($j = 1; $j <= $count; $j++) {
+                                $conf = new ServiceConfig(array_replace_recursive($confAsArray, ["name" => $name . "-" . $j]));
+                                $services[] = $conf;
+                            }
+                        }else{
+                            $conf = new ServiceConfig(array_replace_recursive($confAsArray, ["name" => $name]));
+                            $services[] = $conf;
+                        }
+                    }
+                }else {
+                    foreach ($instances as $i => $instanceConf) {
+                        $name = isset($confAsArray['name']) ? $confAsArray['name']: $instanceConf['name'];
+                        $name = $name . (isset($instanceConf['routing_key']) ? ("-" . $instanceConf['routing_key']): "");
+                        $count = $service->getConfiguration()->get('count', null);
+                        if($count !== null) {
+                            for ($j = 1; $j <= $count; $j++) {
+                                $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf, ["name" => $name . "-" . ($i + 1) * $j]));
+                                $services[] = $conf;
+                            }
+                        }else{
+                            $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf, ["name" => $name . "-" . ($i + 1)]));
+                            $services[] = $conf;
+                        }
+                    }
+                }
+
+            } catch (ServiceException $ex) {
+                $this->logger->error("Init service error: " . $ex->getMessage() . "\n" . $ex->getTraceAsString());
+            }
+        }
+
+        return $services;
     }
 
 }

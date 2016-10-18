@@ -119,7 +119,7 @@ abstract class Consumer
             $this->channel->close()->then(function(){
                 $this->client->disconnect();
             });
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
 
         }
     }
