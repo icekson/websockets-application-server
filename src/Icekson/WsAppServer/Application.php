@@ -216,13 +216,13 @@ class Application implements \SplObserver, ConfigAwareInterface
             }
             if(count($workersInstances) > 0){
                 foreach ($workersInstances as $i => $workersInstance) {
-                    $conf = array_replace_recursive($serviceConf, $workersInstance);
-                    $serviceNameKey = isset($conf['name']) ? $conf['name']: null;
+                    $serviceNameKey = isset($serviceConf['name']) ? ($serviceConf['name'] . "-" .(isset($workersInstance['routing_key']) ? $workersInstance['routing_key'] : ($i+1))) : (isset($workersInstance['name']) ? $workersInstance['name'] : null);
                     if($serviceNameKey === null){
                         continue;
                     }
-                    $serviceName = $serviceNameKey . "-" .(isset($conf['routing_key'])?$conf['routing_key']:($i+1));
-                    if($name == $serviceName){
+                    var_export($serviceNameKey);
+                    if($name == $serviceNameKey){
+                        $conf = array_replace_recursive($serviceConf, $workersInstance);
                         $serviceConfig = $conf;
                         break;
                     }
