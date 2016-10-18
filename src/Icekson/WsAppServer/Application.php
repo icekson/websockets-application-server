@@ -205,15 +205,37 @@ class Application implements \SplObserver, ConfigAwareInterface
     public function runService($name, $type, $routingKey = null)
     {
         $services = $this->getConfiguration()->getServicesConfig();
-        $serviceConfig = isset($services[$name]) ? $services[$name] : null;
-        if ($serviceConfig === null) {
-            $key = preg_replace("/(-\d+$)/", "", $name);
-            $serviceConfig = isset($services[$key]) ? $services[$key] : [];
-            if (!empty($serviceConfig)) {
-                $serviceConfig['name'] = $name;
+        $serviceConfig = null;
+        // find needed service inside config
+        foreach ($services as $key => $serviceConf) {
+            $workersInstances = [];
+            if(isset($serviceConf['workers'])){
+                $workersInstances = $serviceConf['workers'];
+            }else if (isset($serviceConf['servers'])){
+                $workersInstances = $serviceConf['servers'];
             }
-        }
+            if(count($workersInstances) > 0){
+                foreach ($workersInstances as $i => $workersInstance) {
+                    $conf = array_replace_recursive($serviceConf, $workersInstance);
+                    $serviceNameKey = isset($conf['name']) ? $conf['name']: null;
+                    if($serviceNameKey === null){
+                        continue;
+                    }
+                    $serviceName = $serviceNameKey . "-" .(isset($conf['routing_key'])?$conf['routing_key']:($i+1));
+                    if($name == $serviceName){
+                        $serviceConfig = $conf;
+                        break;
+                    }
+                }
+            }else{
+                $serviceNameKey = isset($serviceConf['name']) ? $serviceConf['name']: null;
+                if ($serviceNameKey && $serviceNameKey == $name) {
+                    $serviceConfig = $serviceConf;
+                    break;
+                }
+            }
 
+        }
 
         if (empty($serviceConfig)) {
             throw new ServiceException("Service with name '$name' is not found");
