@@ -8,53 +8,62 @@
       "vhost": "/cricket_dev"
     },
     "services": {
-      "gate-server-1": {
+      "gate-service": {
         "php_path": "php7",
         "name": "gate-server-1",
         "class": "Icekson\\WsAppServer\\Service\\GateService",
-        "host": "195.184.70.228",
-        "port": 80,
-        "bind_port": 5000
+        "servers": [
+          {
+            "host": "195.184.70.228",
+            "port": 80,
+            "bind_port": 5000
+          }
+        ]
       },
-      "connector-server-1": {
+      "connector-service": {
         "php_path": "php7",
         "name": "connector-server-1",
         "class": "Icekson\\WsAppServer\\Service\\ConnectorService",
-        "host": "195.184.70.228",
-        "port": 80,
-        "bind_port": 5100
+        "servers": [
+          {
+            "host": "195.184.70.228",
+            "port": 80,
+            "bind_port": 5100
+          },
+          {
+            "host": "195.184.70.228",
+            "port": 80,
+            "bind_port": 5110
+          },
+          {
+            "host": "195.184.70.228",
+            "port": 80,
+            "bind_port": 5120
+          }
+        ]
       },
-      "connector-server-2": {
+      "backend-service": {
         "php_path": "php7",
-        "name": "connector-server-2",
-        "class": "Icekson\\WsAppServer\\Service\\ConnectorService",
-        "host": "195.184.70.228",
-        "port": 80,
-        "bind_port": 5110
+        "name": "backend-service",
+        "class": "Icekson\\WsAppServer\\Service\\BackendEchoService",
+        "processes_limit": 10,
+        "count": 5
       },
-      "connector-server-3": {
+      "jobs-service": {
         "php_path": "php7",
-        "name": "connector-server-3",
-        "class": "Icekson\\WsAppServer\\Service\\ConnectorService",
-        "host": "195.184.70.228",
-        "port": 80,
-        "bind_port": 5120
-      },
-      "backend-server-1": {
-        "php_path": "php7",
-        "name": "backend-server-1",
-        "class": "Icekson\\WsAppServer\\Service\\BackendEchoService"
-      },
-      "backend-server-2": {
-        "php_path": "php7",
-        "name": "backend-server-2",
-        "class": "Icekson\\WsAppServer\\Service\\BackendEchoService"
-      },
-      "jobs-server-1": {
-        "php_path": "php7",
-        "name": "jobs-server-1",
         "class": "Icekson\\WsAppServer\\Service\\JobsService",
-        "routing_key": "match"
+        "workers": [
+          {
+            "name": "jobs-service-main",
+            "routing_key": "main",
+            "count": 5
+          },
+          {
+            "name": "jobs-service-custom",
+            "routing_key": "custom",
+            "count": 2
+          }
+        ]
       }
     }
   }
