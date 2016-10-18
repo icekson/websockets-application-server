@@ -108,8 +108,8 @@ class Application implements \SplObserver, ConfigAwareInterface
                     }else {
                         foreach ($instances as $i => $instanceConf) {
                             $name = isset($confAsArray['name']) ? $confAsArray['name']: $instanceConf['name'];
-                            $confAsArray['name'] = isset($instanceConf['routing_key']) ? $name . "-" .$instanceConf['routing_key'] : $name . "-" . ($i + 1);
-                            $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf));
+                            $name = $name . "-" .(isset($instanceConf['routing_key']) ? $instanceConf['routing_key'] : ($i + 1));
+                            $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf, ["name" => $name]));
                             $s = $this->initService($conf);
                             $s->startAsProcess();
                             $this->services[$s->getPid()] = $s;
@@ -220,7 +220,6 @@ class Application implements \SplObserver, ConfigAwareInterface
                     if($serviceNameKey === null){
                         continue;
                     }
-                    var_export($serviceNameKey);
                     if($name == $serviceNameKey){
                         $conf = array_replace_recursive($serviceConf, $workersInstance);
                         $serviceConfig = $conf;
@@ -285,7 +284,9 @@ class Application implements \SplObserver, ConfigAwareInterface
                     ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
                 }else {
                     foreach ($instances as $i => $instanceConf) {
-                        $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf));
+                        $name = isset($confAsArray['name']) ? $confAsArray['name']: $instanceConf['name'];
+                        $name = $name . "-" .(isset($instanceConf['routing_key']) ? $instanceConf['routing_key'] : ($i + 1));
+                        $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf, ["name" => $name]));
                         $service = $this->initService($conf);
                         ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
                     }
