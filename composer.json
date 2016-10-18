@@ -1,10 +1,9 @@
 {
     "name": "icekson/ws-app-server",
-    "version": "v0.9.1.0",
     "description": "Scalable websocket server",
     "license": "MIT",
     "type": "library",
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "authors": [
         {
             "name": "Alexey Itsekson",
@@ -19,8 +18,8 @@
         "symfony/console": "~2.8|3.0.*|3.1.*",
         "hassankhan/config": "^0.8.2",
         "monolog/monolog": "^1.17",
-        "icekson/utils": "0.9.0.*",
-        "icekson/remote-services": "0.9.0.*",
+        "icekson/utils": "dev-master",
+        "icekson/remote-services": "dev-master",
         "bunny/bunny": "v0.2.0",
         "predis/predis": "v1.0.*"
 
@@ -37,7 +36,7 @@
     },
     "extra": {
         "branch-alias": {
-            "stable": "0.9.1.*"
+            "dev-php5": "1.0.x-dev"
         }
     }
 }
