@@ -110,9 +110,13 @@ class Application implements \SplObserver, ConfigAwareInterface
                             $name = isset($confAsArray['name']) ? $confAsArray['name']: $instanceConf['name'];
                             $name = $name . "-" .(isset($instanceConf['routing_key']) ? $instanceConf['routing_key'] : ($i + 1));
                             $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf, ["name" => $name]));
-                            $s = $this->initService($conf);
-                            $s->startAsProcess();
-                            $this->services[$s->getPid()] = $s;
+                            $count = $service->getConfiguration()->get('count', 1);
+                            for ($j = 1; $j <= $count; $j++) {
+                                $conf['name'] = $conf['name'] . "-" . $j;
+                                $s = $this->initService(new ServiceConfig($conf));
+                                $s->startAsProcess();
+                                $this->services[$s->getPid()] = $s;
+                            }
                         }
                     }
                 }
@@ -287,8 +291,14 @@ class Application implements \SplObserver, ConfigAwareInterface
                         $name = isset($confAsArray['name']) ? $confAsArray['name']: $instanceConf['name'];
                         $name = $name . "-" .(isset($instanceConf['routing_key']) ? $instanceConf['routing_key'] : ($i + 1));
                         $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf, ["name" => $name]));
-                        $service = $this->initService($conf);
-                        ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
+                        $count = $service->getConfiguration()->get('count', 1);
+                        $conf = $conf->toArray();
+                        for ($j = 1; $j <= $count; $j++) {
+                            $conf['name'] = $conf['name'] . "-" . $j;
+                            $service = $this->initService($conf);
+                            ProcessStarter::getInstance()->stopProccessByCmd($service->getRunCmd());
+                        }
+
                     }
                 }
 
