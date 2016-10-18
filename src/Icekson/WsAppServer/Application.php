@@ -205,14 +205,13 @@ class Application implements \SplObserver, ConfigAwareInterface
     public function runService($name, $type, $routingKey = null)
     {
         $services = $this->getConfiguration()->getServicesConfig();
-        if ($type == 'backend') {
+        $serviceConfig = isset($services[$name]) ? $services[$name] : null;
+        if ($serviceConfig === null) {
             $key = preg_replace("/(-\d+$)/", "", $name);
             $serviceConfig = isset($services[$key]) ? $services[$key] : [];
             if (!empty($serviceConfig)) {
                 $serviceConfig['name'] = $name;
             }
-        } else {
-            $serviceConfig = isset($services[$name]) ? $services[$name] : [];
         }
 
 

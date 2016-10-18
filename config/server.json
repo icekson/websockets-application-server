@@ -11,7 +11,7 @@
     "services": {
       "gate-service": {
         "php_path": "php",
-        "name": "gate-server-1",
+        "name": "gate-service",
         "class": "Icekson\\WsAppServer\\Service\\GateService",
         "servers": [
           {
@@ -23,7 +23,7 @@
       },
       "connector-service": {
         "php_path": "php",
-        "name": "connector-server-1",
+        "name": "connector-service",
         "class": "Icekson\\WsAppServer\\Service\\ConnectorService",
         "servers": [
           {
