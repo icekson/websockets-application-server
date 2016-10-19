@@ -253,7 +253,7 @@ class Application implements \SplObserver, ConfigAwareInterface
                     $name = isset($confAsArray['name']) ? $confAsArray['name']: null;
                     if($name !== null) {
                         $name = $name . (isset($confAsArray['routing_key']) ? ("-" . $confAsArray['routing_key']) : "");
-                        $count = $service->getConfiguration()->get('count', null);
+                        $count = isset($confAsArray['count']) ? $confAsArray['count'] : null;
                         if($count !== null) {
                             for ($j = 1; $j <= $count; $j++) {
                                 $conf = new ServiceConfig(array_replace_recursive($confAsArray, ["name" => $name . "-" . $j]));
@@ -268,7 +268,7 @@ class Application implements \SplObserver, ConfigAwareInterface
                     foreach ($instances as $i => $instanceConf) {
                         $name = isset($confAsArray['name']) ? $confAsArray['name']: $instanceConf['name'];
                         $name = $name . (isset($instanceConf['routing_key']) ? ("-" . $instanceConf['routing_key']): "");
-                        $count = $service->getConfiguration()->get('count', null);
+                        $count = isset($instanceConf['count']) ? $instanceConf['count'] : null;
                         if($count !== null) {
                             for ($j = 1; $j <= $count; $j++) {
                                 $conf = new ServiceConfig(array_replace_recursive($confAsArray, $instanceConf, ["name" => $name . "-" . ($i + 1) * $j]));
