@@ -12,18 +12,33 @@ use Icekson\Config\ConfigAdapter;
 use Icekson\Config\ConfigureInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Predis\Client;
+use Zend\Cache\Storage\Adapter\Memcache;
 
-class RedisStorage extends AbstractStorage
+class MemcacheStorage extends AbstractStorage
 {
-    private $redis;
+    /**
+     * @var null|Memcache
+     */
+    private $storage;
 
 
     public function __construct(ConfigureInterface $config)
     {
-        $redis = $config->get('redis', ['host' => '127.0.0.1', 'port' => 6379, 'perfix' => 'ws-app.load-balancer']);
+        $redis = $config->get('memcache', ['host' => '127.0.0.1', 'port' => 11211, 'perfix' => 'ws-app.load-balancer']);
         $host = $redis["host"];
         $port = $redis["port"];
-        $this->redis = new Client("tcp://{$host}:{$port}", ['prefix' => $redis['prefix']]);
+        try {
+            $storage = new Memcache(['servers' => [
+                [
+                    "host" => $host,
+                    "port" => $port
+                ]
+            ]]);
+        }catch (\Throwable $ex){
+            $storage = null;
+        }
+        $this->storage = $storage;
+
     }
 
 
@@ -32,9 +47,14 @@ class RedisStorage extends AbstractStorage
         if(!$this->check()){
             return [];
         }
-        $info = $this->redis->get("services.info");
-        $info = @unserialize($info);
-        if (empty($info)) {
+        $res = false;
+        $info = $this->storage->getItem("services.info", $res);
+        if($res) {
+            $info = @unserialize($info);
+            if (empty($info)) {
+                $info = [];
+            }
+        }else{
             $info = [];
         }
         return $info;
@@ -43,13 +63,13 @@ class RedisStorage extends AbstractStorage
     protected function saveServicesInfo($info)
     {
         if(!$this->check()){
-            return;
+            return [];
         }
         if(empty($info)){
             $info = [];
         }
         $d = @serialize($info);
-        $this->redis->set("services.info", $d);
+        $this->storage->setItem("services.info", $d);
     }
 
 
@@ -62,11 +82,12 @@ class RedisStorage extends AbstractStorage
         if(!$this->check()){
             return true;
         }
-        $isLocked = $this->redis->get("$key.lock");
-        if($isLocked){
+        $res = false;
+        $isLocked = $this->storage->getItem("$key.lock", $res);
+        if($res && $isLocked){
             return false;
         }
-        $this->redis->set("$key.lock", true);
+        $this->storage->setItem("$key.lock", true);
         return true;
     }
 
@@ -75,7 +96,7 @@ class RedisStorage extends AbstractStorage
         if(!$this->check()){
             return;
         }
-        $this->redis->set("$key.lock", false);
+        $this->storage->setItem("$key.lock", false);
     }
 
 
@@ -83,7 +104,7 @@ class RedisStorage extends AbstractStorage
     {
         $res = true;
         try{
-            $this->redis->set('test',"test");
+            $this->storage->setItem('test',"test");
         }catch (\Throwable $ex){
             $res = false;
         }
