@@ -13,86 +13,45 @@ use Icekson\Config\ConfigureInterface;
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Predis\Client;
 
-class SimpleStorage implements StorageInterface
+class SimpleStorage extends AbstractStorage
 {
-    /**
-     * @var \ArrayObject|null|ServiceConfig[]
-     */
-    private $services = null;
-
-    private $counts = [];
-
+    private $connectors = [];
 
     public function __construct(ConfigureInterface $config)
     {
-        $this->services = new \ArrayObject();
+        parent::__construct($config);
     }
+
+
+    protected function getServicesInfo()
+    {
+        return $this->connectors;
+    }
+
+    protected function saveServicesInfo($info)
+    {
+        $this->connectors = $info;
+    }
+
 
     /**
-     * @param $serviceName
-     * @return null
-     * @throws StorageException
+     * @param $key
+     * @return bool
      */
-    public function geCountOfConnections($serviceName)
+    protected function lock($key)
     {
-        $count = null;
-        foreach ($this->services as $service) {
-            if(isset($this->counts[$service->getName()])){
-                $count = $this->counts[$service->getName()];
-                break;
-            }
-        }
-        if($count === null){
-            throw new StorageException("there is noe registered service '{$serviceName}'");
-        }
-        return $count;
+        return true;
     }
 
-    /**
-     * @param $serviceName
-     * @return $this
-     */
-    public function incrementCounter($serviceName)
+    protected function unlock($key)
     {
-        if(!isset($this->counts[$serviceName])){
-            $this->counts[$serviceName] = 0;
-        }
-        $this->counts[$serviceName]++;
-        return $this;
+
     }
 
-    public function decrementCounter($serviceName)
+
+    public function check()
     {
-        if(!isset($this->counts[$serviceName])){
-            $this->counts[$serviceName] = 0;
-        }
-        if($this->counts[$serviceName] > 0) {
-            $this->counts[$serviceName]--;
-        }
-        return $this;
+        return true;
     }
 
-    /**
-     * @param array $services
-     * @return $this
-     */
-    public function persistAvailableConnectors(array $services)
-    {
-        $this->services = $services;
-        return $this;
-    }
-
-    /**
-     * @return \ArrayObject|\Icekson\WsAppServer\Config\ServiceConfig[]|null
-     */
-    public function retrieveAvailableConnectors()
-    {
-        return $this->services;
-    }
-
-    public function reset()
-    {
-        $this->counts = [];
-        $this->services = [];
-    }
 }

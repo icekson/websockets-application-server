@@ -24,6 +24,7 @@ class MemcacheStorage extends AbstractStorage
 
     public function __construct(ConfigureInterface $config)
     {
+        parent::__construct($config);
         $redis = $config->get('memcache', ['host' => '127.0.0.1', 'port' => 11211, 'perfix' => 'ws-app.load-balancer']);
         $host = $redis["host"];
         $port = $redis["port"];
@@ -35,6 +36,7 @@ class MemcacheStorage extends AbstractStorage
                 ]
             ]]);
         }catch (\Throwable $ex){
+            $this->logger->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
             $storage = null;
         }
         $this->storage = $storage;
@@ -106,6 +108,7 @@ class MemcacheStorage extends AbstractStorage
         try{
             $this->storage->setItem('test',"test");
         }catch (\Throwable $ex){
+            $this->logger->error("check memcache storage failed: " . $ex->getMessage() . "\n" . $ex->getTraceAsString());
             $res = false;
         }
         return $res;

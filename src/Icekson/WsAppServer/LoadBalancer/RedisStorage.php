@@ -20,6 +20,7 @@ class RedisStorage extends AbstractStorage
 
     public function __construct(ConfigureInterface $config)
     {
+        parent::__construct($config);
         $redis = $config->get('redis', ['host' => '127.0.0.1', 'port' => 6379, 'perfix' => 'ws-app.load-balancer']);
         $host = $redis["host"];
         $port = $redis["port"];
@@ -85,6 +86,7 @@ class RedisStorage extends AbstractStorage
         try{
             $this->redis->set('test',"test");
         }catch (\Throwable $ex){
+            $this->logger->error("check redis storage failed: " . $ex->getMessage() . "\n" . $ex->getTraceAsString());
             $res = false;
         }
         return $res;

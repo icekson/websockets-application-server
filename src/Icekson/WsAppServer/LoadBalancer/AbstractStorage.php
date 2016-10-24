@@ -10,12 +10,23 @@ namespace Icekson\WsAppServer\LoadBalancer;
 
 use Icekson\Config\ConfigAdapter;
 use Icekson\Config\ConfigureInterface;
+use Icekson\Utils\Logger;
 use Icekson\WsAppServer\Config\ServiceConfig;
 use Predis\Client;
 use Zend\Cache\Storage\Adapter\Memcache;
 
 abstract class AbstractStorage implements StorageInterface
 {
+    /**
+     * @var ConfigureInterface|null
+     */
+    protected $config = null;
+    protected $logger = null;
+    public function __construct(ConfigureInterface $config)
+    {
+        $this->config = $config;
+        $this->logger = Logger::createLogger(get_class($this), $config->toArray());
+    }
 
     /**
      * @param $serviceName
