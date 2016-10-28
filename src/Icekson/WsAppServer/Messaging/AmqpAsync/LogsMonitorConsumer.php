@@ -141,6 +141,7 @@ class LogsMonitorConsumer
     {
         $consumer = $this;
         $routingKey = "log." . $msg->routingKey;
+        $routingKey = "log." . preg_replace("/[\/\\\]+/", ".", $msg->routingKey);
         $message = '{"event": "' . $routingKey . '", "event_data": ' . $msg->content . '}';
         $socket = null;
         try {
