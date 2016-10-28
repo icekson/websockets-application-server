@@ -21,7 +21,8 @@
         "icekson/utils": "dev-master",
         "icekson/remote-services": "dev-master",
         "bunny/bunny": "v0.2.0",
-        "predis/predis": "v1.0.*"
+        "predis/predis": "v1.0.*",
+        "zendframework/zend-cache" : "2.7.1"
 
     },
     "require-dev": {

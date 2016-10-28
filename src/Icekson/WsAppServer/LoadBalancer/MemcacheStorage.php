@@ -36,7 +36,7 @@ class MemcacheStorage extends AbstractStorage
                 ]
             ]]);
         }catch (\Throwable $ex){
-            $this->logger->error($ex->getMessage() . "\n" . $ex->getTraceAsString());
+            $this->logger->notice($ex->getMessage() . "\n" . $ex->getTraceAsString());
             $storage = null;
         }
         $this->storage = $storage;
@@ -108,7 +108,7 @@ class MemcacheStorage extends AbstractStorage
         try{
             $this->storage->setItem('test',"test");
         }catch (\Throwable $ex){
-            $this->logger->error("check memcache storage failed: " . $ex->getMessage() . "\n" . $ex->getTraceAsString());
+            $this->logger->notice("check memcache storage failed: " . $ex->getMessage() . "\n" . $ex->getTraceAsString());
             $res = false;
         }
         return $res;
