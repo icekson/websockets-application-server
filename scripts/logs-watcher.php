@@ -67,6 +67,6 @@ try {
     echo 'amqp logger error: ' . $e->getMessage() . "\n" . $e->getTraceAsString();
 }
 register_shutdown_function(function () use ($conn, $channel) {
-    $conn->close();
     $channel->close();
+    $conn->close();
 });

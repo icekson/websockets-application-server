@@ -78,12 +78,13 @@ class ResponseQueue
     public function __destruct()
     {
         try {
-            if($this->connection) {
-                $this->connection->close();
-            }
             if($this->channel){
                 $this->channel->close();
             }
+            if($this->connection) {
+                $this->connection->close();
+            }
+
         } catch (\Exception $e) {
 
         }

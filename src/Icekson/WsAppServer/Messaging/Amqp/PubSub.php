@@ -76,8 +76,8 @@ class PubSub implements PubSubInterface
     public function __destruct()
     {
         try {
-            $this->connection->close();
             $this->channel->close();
+            $this->connection->close();
         } catch (\Exception $e) {
 
         }
