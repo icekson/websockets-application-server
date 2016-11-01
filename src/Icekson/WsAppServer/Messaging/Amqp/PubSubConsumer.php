@@ -45,6 +45,8 @@ class PubSubConsumer
      */
     private $pubSubListener = null;
 
+    private $channelId = -1;
+
     /**
      * AMQPPubSubConsumer constructor.
      * @param array $config
@@ -66,6 +68,7 @@ class PubSubConsumer
         $vhost = $config['amqp']['vhost'];
 
         $this->connection = new AMQPStreamConnection($host, $port, $user, $password, $vhost);
+        $this->channelId = mt_rand(1, 65535);
         $this->initConnection();
 
     }
@@ -75,7 +78,7 @@ class PubSubConsumer
         if (!$this->connection->isConnected()) {
             $this->connection->reconnect();
         }
-        $this->channel = $this->connection->channel();
+        $this->channel = $this->connection->channel($this->channelId);
         $this->channel->exchange_declare($this->exchangeName, 'topic', false, true, false);
         $this->channel->queue_declare($this->exchangeName . "." . $this->serviceName, false, true, false, false);
         $this->channel->queue_bind($this->exchangeName . "." . $this->serviceName, $this->exchangeName, "#");

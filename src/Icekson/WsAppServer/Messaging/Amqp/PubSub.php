@@ -40,6 +40,8 @@ class PubSub implements PubSubInterface
      */
     private $logger = null;
 
+    private $channelId = -1;
+
     /**
      * @param array $config
      * @param string $exchangeName
@@ -57,6 +59,7 @@ class PubSub implements PubSubInterface
         $password = $config['amqp']['password'];
         $vhost = $config['amqp']['vhost'];
         $this->connection = new AMQPStreamConnection($host, $port, $user, $password, $vhost);
+        $this->channelId = mt_rand(1, 65535);
         $this->initConnection();
 
     }
@@ -66,7 +69,7 @@ class PubSub implements PubSubInterface
         if(!$this->connection->isConnected()){
             $this->connection->reconnect();
         }
-        $this->channel = $this->connection->channel();
+        $this->channel = $this->connection->channel($this->channelId);
         $this->channel->exchange_declare($this->exchangeName, 'topic', false, true, false);
         if(!preg_match("/backend-server/", $this->serviceName)) {
             $this->channel->queue_declare($this->exchangeName . "." . $this->serviceName, false, true, false, false);

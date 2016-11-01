@@ -44,6 +44,8 @@ class Worker implements ConfigAwareInterface
      */
     private $config = null;
 
+    private $channelId = -1;
+
     /**
      * Worker constructor.
      * @param ConfigureInterface $config
@@ -69,6 +71,7 @@ class Worker implements ConfigAwareInterface
         $user = $config['amqp']['user'];
         $password = $config['amqp']['password'];
         $vhost = $config['amqp']['vhost'];
+        $this->channelId = mt_rand(1, 65535);
         $this->connection = new AMQPStreamConnection($host, $port, $user, $password, $vhost);
 
 
@@ -82,7 +85,7 @@ class Worker implements ConfigAwareInterface
         if(!$this->connection->isConnected()){
             $this->connection->reconnect();
         }
-        $this->channel = $this->connection->channel();
+        $this->channel = $this->connection->channel($this->channelId);
         $this->channel->exchange_declare($this->exchangeName, 'direct', false, true, false);
         $this->channel->queue_declare($this->queueName, false, true, false, false);
         $this->channel->queue_bind($this->queueName, $this->exchangeName, $routingKey);

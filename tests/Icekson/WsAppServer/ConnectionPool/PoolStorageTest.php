@@ -4,13 +4,13 @@
  * @createdAt: 31.05.2016 16:38
  */
 
-namespace IceksonTest\WsAppServer\Pool;
+namespace IceksonTest\WsAppServer\ConnectionPool;
 
 
 
-use Icekson\WsAppServer\Pool\PoolStorage;
-use Icekson\WsAppServer\Pool\ConnectionsPool;
-use Icekson\WsAppServer\Pool\TimeoutException;
+use Icekson\WsAppServer\ConnectionPool\PoolStorage;
+use Icekson\WsAppServer\ConnectionPool\ConnectionsPool;
+use Icekson\WsAppServer\ConnectionPool\TimeoutException;
 
 class PoolStorageTest extends \PHPUnit_Framework_TestCase
 {
@@ -72,10 +72,7 @@ class PoolStorageTest extends \PHPUnit_Framework_TestCase
         $poolSize = 20;
         $pool = new ConnectionsPool(get_class($connection), $poolSize, []);
 //
-//        $pool = $this->getMockBuilder('\Icekson\WsAppServer\Pool\PoolStorage')
-//            ->setConstructorArgs([get_class($connection), $poolSize, []])
-//            ->getMock();
-//        $pool->expects($this->once())->method("wait");
+
 
         $pool->setTimeout(1);
         $instance = null;

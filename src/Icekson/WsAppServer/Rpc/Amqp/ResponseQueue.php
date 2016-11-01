@@ -37,7 +37,7 @@ class ResponseQueue
      */
     private $logger = null;
 
-    private $channelName = "";
+    private $channelId = -1;
 
     /**
      * ResponseQueue constructor.
@@ -59,7 +59,7 @@ class ResponseQueue
         $password = $config['amqp']['password'];
         $vhost = $config['amqp']['vhost'];
         $this->connection = new AMQPStreamConnection($host, $port, $user, $password, $vhost);
-        $this->channelName = uniqid();
+        $this->channelId = mt_rand(1, 65535);
         // $this->initConnection();
 
     }
@@ -70,7 +70,7 @@ class ResponseQueue
             $this->connection->reconnect();
         }
 
-        $this->channel = $this->connection->channel();
+        $this->channel = $this->connection->channel($this->channelId);
         $this->channel->exchange_declare($this->exchangeName, 'direct', false, true, false);
         //$this->channel->queue_declare($this->queueName, false, true, false, false, false);
     }

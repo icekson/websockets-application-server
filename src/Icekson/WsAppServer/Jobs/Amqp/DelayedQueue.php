@@ -33,7 +33,7 @@ class DelayedQueue implements DelayedQueueInterface
     private $targetQueueName = 'match-jobs';
     private $exchangeName = '';
     private $targetExchangeName = 'jobs';
-    private $channelName = "";
+    private $channelId = -1;
 
     /**
      * @var null|LoggerInterface
@@ -64,7 +64,7 @@ class DelayedQueue implements DelayedQueueInterface
         $password = $config['amqp']['password'];
         $vhost = $config['amqp']['vhost'];
         $this->connection = new AMQPStreamConnection($host, $port, $user, $password, $vhost);
-        $this->channelName = uniqid();
+        $this->channelId = mt_rand(1, 65535);
         // $this->initConnection();
 
     }
@@ -74,7 +74,7 @@ class DelayedQueue implements DelayedQueueInterface
         if (!$this->connection->isConnected()) {
             $this->connection->reconnect();
         }
-        $this->channel = $this->connection->channel();
+        $this->channel = $this->connection->channel($this->channelId);
         $this->channel->exchange_declare($this->targetExchangeName, 'direct', false, true, false);
         $this->channel->queue_declare($this->targetQueueName, false, true, false, false);
         //$this->channel->queue_bind($this->targetQueueName, $this->targetExchangeName, '#');
