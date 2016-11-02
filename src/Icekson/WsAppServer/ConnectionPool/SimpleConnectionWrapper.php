@@ -46,6 +46,11 @@ class SimpleConnectionWrapper implements ConnectionWrapperInterface
             $this->connection->close();
         }
     }
+
+    public function ping()
+    {
+
+    }
     
     
 }

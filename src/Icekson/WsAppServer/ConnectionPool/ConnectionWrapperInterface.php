@@ -20,6 +20,8 @@ interface ConnectionWrapperInterface
     public function isAlive();
 
     public function dispose();
+
+    public function ping();
     
     
 }
