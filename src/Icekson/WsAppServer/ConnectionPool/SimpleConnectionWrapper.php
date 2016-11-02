@@ -30,16 +30,24 @@ class SimpleConnectionWrapper implements ConnectionWrapperInterface
         $res = true;
         try{
             if(method_exists($this->connection, 'ping')){
-                $res = !$this->connection->ping();
+                $res = $this->connection->ping();
             }
         }catch (\Exception $ex){}
+
         if(!$res) {
-            if (method_exists($this->connection, 'isConnected')) {
-                $res = $this->connection->isConnected();
-            }else {
-                if (method_exists($this->connection, 'isClosed')) {
-                    $res = !$this->connection->isClosed();
-                }
+            if(method_exists($this->connection, 'close')){
+                $this->connection->close();
+            }
+            if(method_exists($this->connection, 'connect')){
+                $this->connection->connect();
+            }
+        }
+
+        if (method_exists($this->connection, 'isConnected')) {
+            $res = $this->connection->isConnected();
+        }else {
+            if (method_exists($this->connection, 'isClosed')) {
+                $res = !$this->connection->isClosed();
             }
         }
         return $res;
