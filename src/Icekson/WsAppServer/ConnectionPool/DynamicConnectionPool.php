@@ -70,7 +70,7 @@ class DynamicConnectionPool extends AbstractConnectionPool implements LimmitedPo
             $connections = [];
             for($i = 0; $i < $this->step; $i++){
                 $c = $this->factory->createConnection();
-                $connections[] = $c;
+                $connections[] = new SimpleConnectionWrapper($c);
             }
             $pool = new StaticConnectionPool($connections, $this->connectionPoolParams);
             $this->staticPools[] = $pool;
