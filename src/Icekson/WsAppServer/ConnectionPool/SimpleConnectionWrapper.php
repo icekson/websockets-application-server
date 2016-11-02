@@ -28,11 +28,19 @@ class SimpleConnectionWrapper implements ConnectionWrapperInterface
     public function isAlive()
     {
         $res = true;
-        if(method_exists($this->connection, 'isConnected')){
-            $res = $this->connection->isConnected();
-        }
-        if(method_exists($this->connection, 'isClosed')){
-            $res = !$this->connection->isClosed();
+        try{
+            if(method_exists($this->connection, 'ping')){
+                $res = !$this->connection->ping();
+            }
+        }catch (\Exception $ex){}
+        if(!$res) {
+            if (method_exists($this->connection, 'isConnected')) {
+                $res = $this->connection->isConnected();
+            }else {
+                if (method_exists($this->connection, 'isClosed')) {
+                    $res = !$this->connection->isClosed();
+                }
+            }
         }
         return $res;
     }
