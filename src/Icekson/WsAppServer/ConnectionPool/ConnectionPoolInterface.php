@@ -24,7 +24,11 @@ interface ConnectionPoolInterface
     /** ConnectionWrapperInterface[] */
     public function getConnections();
 
-    public function dispose(ConnectionWrapperInterface $connection);
+    public function dispose();
 
-    public function release();
+    public function releaseAll();
+
+    public function releaseConnection(ConnectionWrapperInterface $connection);
+
+    public function isEmpty();
 }

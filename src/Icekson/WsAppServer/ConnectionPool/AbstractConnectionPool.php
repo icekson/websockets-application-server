@@ -38,13 +38,6 @@ abstract class AbstractConnectionPool implements ConnectionPoolInterface
 
     public function __construct($connections, SelectorInterface $selector = null, $connectionPoolParams = [])
     {
-        $paramList = array('connections', 'selector', 'connectionPoolParams');
-        foreach ($paramList as $param) {
-            if (isset($$param) === false) {
-                throw new \InvalidArgumentException('`' . $param . '` parameter must not be null');
-            }
-        }
-
         $this->connections          = $connections;
         $this->seedConnections      = $connections;
         $this->selector             = $selector;
@@ -63,16 +56,23 @@ abstract class AbstractConnectionPool implements ConnectionPoolInterface
         return $this->connections;
     }
 
-    public function release()
-    {
-        foreach ($this->connections as $index => $connection) {
-           $this->dispose($connection);
-        }
+
+    public function releaseAll(){
+
     }
 
-    public function dispose(ConnectionWrapperInterface $connection)
+
+    public function releaseConnection(ConnectionWrapperInterface $connection)
     {
-       $connection->dispose();
+        $connection->dispose();
+    }
+
+    public function dispose()
+    {
+        /** @var  $connection */
+        foreach ($this->connections as $connection) {
+            $connection->dispose();
+        }
     }
     /**
      * @param bool $force
@@ -81,6 +81,9 @@ abstract class AbstractConnectionPool implements ConnectionPoolInterface
      */
     abstract public function nextConnection($force = false);
     abstract public function scheduleCheck();
+    /** @return boolean */
+    abstract public function isEmpty();
+
 
 
 }

@@ -34,7 +34,10 @@ class SimpleConnectionPool extends AbstractConnectionPool
     {
     }
 
-   
+    public function isEmpty()
+    {
+        return false;
+    }
 
 
 }

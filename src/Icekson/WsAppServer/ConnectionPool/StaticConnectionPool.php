@@ -11,9 +11,10 @@ namespace Icekson\WsAppServer\ConnectionPool;
 use Icekson\WsAppServer\ConnectionPool\Exception\ConnectionsLimitExceededException;
 use Icekson\WsAppServer\ConnectionPool\Exception\NoConnectionAvailableException;
 use Icekson\WsAppServer\ConnectionPool\Selector\LimitUsageSelector;
+use Icekson\WsAppServer\ConnectionPool\Selector\RoundRobinSelector;
 use Icekson\WsAppServer\ConnectionPool\Selector\SelectorInterface;
 
-class StaticConnectionPool extends AbstractConnectionPool
+class StaticConnectionPool extends AbstractConnectionPool implements LimmitedPoolInterface
 {
     /**
      * @var int
@@ -26,6 +27,10 @@ class StaticConnectionPool extends AbstractConnectionPool
     
     private $timeout = 30;
 
+    private $limit = 10;
+
+    private $users = [];
+
     /**
      * {@inheritdoc}
      */
@@ -34,10 +39,12 @@ class StaticConnectionPool extends AbstractConnectionPool
         if(isset($connectionPoolParams['limitPerConnection'])){
             $limit = (int)$connectionPoolParams['limitPerConnection'];
         }else{
-            $limit = 100;
+            $limit = 10;
         }
-        $selector = new LimitUsageSelector($limit);
+        $this->limit = $limit;
+        $selector = new RoundRobinSelector();
         parent::__construct($connections, $selector, $connectionPoolParams);
+        $this->size = count($connections);
               
         $this->scheduleCheck();
     }
@@ -53,7 +60,7 @@ class StaticConnectionPool extends AbstractConnectionPool
         $result = null;
         while($total > 0){
             try {
-                $conn = $this->selector->select($this->connections);
+                $conn = $this->select($this->connections);
                 if($conn->isAlive()){
                     $result = $conn;
                     break;
@@ -67,9 +74,105 @@ class StaticConnectionPool extends AbstractConnectionPool
         }
         return $result;
     }
+
+    /**
+     * @param \Icekson\WsAppServer\ConnectionPool\ConnectionWrapperInterface[] $connections
+     * @throws ConnectionsLimitExceededException
+     * @return ConnectionWrapperInterface
+     */
+    private function select($connections)
+    {
+        $result = null;
+        $countConnections = count($connections);
+        while($countConnections > 0){
+            $connection = $this->selector->select($connections);
+            $count = 0;
+            $hash = $this->hash($connection);
+            if(isset($this->users[$hash])){
+                $count = $this->users[$hash];
+            }else{
+                $this->users[$hash] = 0;
+            }
+            if($count < $this->limit){
+                $this->users[$hash] = $this->users[$hash] += 1;
+                $result = $connection;
+                break;
+            }
+            $countConnections--;
+        }
+        if($result === null){
+            throw new ConnectionsLimitExceededException("Amount usages {$this->limit} per a connection limit exceeded");
+        }
+        return $result;
+    }
     public function scheduleCheck()
     {
 
     }
+
+    public function releaseAll()
+    {
+        $this->users = [];
+        $this->dispose();
+    }
+
+    public function releaseConnection(ConnectionWrapperInterface $connection)
+    {
+        $hash = $this->hash($connection);
+        $count = 0;
+        if(isset($this->users[$hash])) {
+            $count = $this->users[$hash];
+            $count--;
+        }
+        if($count < 0){
+            $count = 0;
+        }
+        $this->users[$hash] = $count;
+    }
+
+    private function hash(ConnectionWrapperInterface $connection)
+    {
+        return spl_object_hash($connection);
+    }
+
+    public function isEmpty()
+    {
+        $count = 0;
+        foreach ($this->users as $hash => $c){
+            if($c > 0){
+                $count += $c;
+            }
+        }
+        return $count == 0;
+    }
+
+    public function getTotalSize()
+    {
+        return $this->size*$this->limit;
+    }
+
+    public function getAvailableSize()
+    {
+        $count = 0;
+        foreach ($this->users as $c) {
+            $count = $count + $c;
+        }
+        return $this->getTotalSize() - $count;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isExceededLimit()
+    {
+        $count = 0;
+        foreach ($this->users as $c) {
+            if($c == $this->limit){
+                $count++;
+            }
+        }
+        return $count === $this->size;
+    }
+
 
 }
