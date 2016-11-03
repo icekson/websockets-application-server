@@ -31,4 +31,6 @@ interface ConnectionPoolInterface
     public function releaseConnection(ConnectionWrapperInterface $connection);
 
     public function isEmpty();
+
+    public function ping();
 }

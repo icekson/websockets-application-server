@@ -74,6 +74,14 @@ abstract class AbstractConnectionPool implements ConnectionPoolInterface
             $connection->dispose();
         }
     }
+
+    public function ping()
+    {
+        /** @var ConnectionWrapperInterface $connection */
+        foreach ($this->connections as $connection) {
+            $connection->ping();
+        }
+    }
     /**
      * @param bool $force
      *
@@ -83,6 +91,8 @@ abstract class AbstractConnectionPool implements ConnectionPoolInterface
     abstract public function scheduleCheck();
     /** @return boolean */
     abstract public function isEmpty();
+
+
 
 
 

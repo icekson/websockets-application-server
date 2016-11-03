@@ -65,7 +65,9 @@ class SimpleConnectionWrapper implements ConnectionWrapperInterface
 
     public function ping()
     {
-
+        if(method_exists($this->connection, 'ping')){
+            $this->connection->ping();
+        }
     }
     
     
