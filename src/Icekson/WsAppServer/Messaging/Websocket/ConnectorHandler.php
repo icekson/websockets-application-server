@@ -93,6 +93,11 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     private $rpcQueue = null;
 
     /**
+     * @var null|\ArrayObject
+     */
+    private $rpcRequestsConnections = null;
+
+    /**
      * @var null|LoopInterface
      */
     private $loop = null;
@@ -123,6 +128,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $this->loop = $loop;
         $this->pubSub = new AMQPPubSub($config->toArray(), $this->getName());
         $this->rpcQueue = new \ArrayObject();
+        $this->rpcRequestsConnections = new \ArrayObject();
         $this->rpc = new RPC(RPC::TYPE_REQUEST, $loop, $this, $config->get("name"), $this->getConfiguration()->toArray());
 
         $this->connectionStateCallbacks = new \SplObjectStorage();
@@ -309,15 +315,17 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     $this->pubSub->unsubscribe($event, $id);
                     break;
                 case 'publish' :
-                    // TODO: remve publish action from here
-                    if (empty($event)) {
-                        throw new \InvalidArgumentException("event name parameter is empty");
-                    }
-                    $params = $this->request->params()->get('params', array());
-                    $this->logger()->info("Publish: event - $event; publisherId - $publisherId");
-                    $this->logger()->debug("Publish data: " . json_encode($params));
+                    if($this->getConfiguration()->get('is_debug')) {
+                        // TODO: remve publish action from here
+                        if (empty($event)) {
+                            throw new \InvalidArgumentException("event name parameter is empty");
+                        }
+                        $params = $this->request->params()->get('params', array());
+                        $this->logger()->info("Publish: event - $event; publisherId - $publisherId");
+                        $this->logger()->debug("Publish data: " . json_encode($params));
 
-                    $this->pubSub->publish($event, $publisherId, new PubSub\Utils\ParamsBag($params));
+                        $this->pubSub->publish($event, $publisherId, new PubSub\Utils\ParamsBag($params));
+                    }
                     break;
 
                 case 'rpc' :
@@ -328,6 +336,10 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     $this->rpcQueue[$from->resourceId][] = [
                         'user' => $identity,
                         'requestId' => $requestId
+                    ];
+                    $this->rpcRequestsConnections[$requestId][] = [
+                        'user' => $identity,
+                        'connection' => $from->resourceId
                     ];
                     $this->sendRequest($requestId, "$service/$action", $params);
                     return;
@@ -442,24 +454,28 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     {
         $res = [];
 
-        foreach ($this->rpcQueue as $connectionId =>  $requestData) {
-            foreach ($requestData as $data) {
-                if(isset($data['requestId']) && $data['requestId'] == $id){
-                    $connection = null;
-                    foreach ($this->clients as $conn) {
-                        if($conn->resourceId == $connectionId){
-                            $connection = $conn;
-                            break;
-                        }
-                    }
-                    $res[] = [
-                        'connection' => $connection,
-                        'user' => $data['user']
-                    ];
-                    break;
-                }
-            }
+        if(isset($this->rpcRequestsConnections[$id])) {
+            $res = $this->rpcRequestsConnections[$id];
         }
+
+//        foreach ($this->rpcQueue as $connectionId =>  $requestData) {
+//            foreach ($requestData as $data) {
+//                if(isset($data['requestId']) && $data['requestId'] == $id){
+//                    $connection = null;
+//                    foreach ($this->clients as $conn) {
+//                        if($conn->resourceId == $connectionId){
+//                            $connection = $conn;
+//                            break;
+//                        }
+//                    }
+//                    $res[] = [
+//                        'connection' => $connection,
+//                        'user' => $data['user']
+//                    ];
+//                    break;
+//                }
+//            }
+//        }
         return $res;
     }
 
@@ -568,6 +584,9 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     if ($index > -1) {
                         unset($this->rpcQueue[$conn->resourceId][$index]);
                     }
+                }
+                if(isset($this->rpcRequestsConnections[$resp->getRequestId()])){
+                    unset($this->rpcRequestsConnections[$resp->getRequestId()]);
                 }
             }else{
                 // there is no connection available for such response, so we need to wait for new connection from
