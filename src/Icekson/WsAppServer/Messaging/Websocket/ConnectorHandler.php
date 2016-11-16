@@ -92,10 +92,6 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
      */
     private $rpcQueue = null;
 
-    /**
-     * @var null|\ArrayObject
-     */
-    private $rpcRequestsConnections = null;
 
     /**
      * @var null|LoopInterface
@@ -128,7 +124,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $this->loop = $loop;
         $this->pubSub = new AMQPPubSub($config->toArray(), $this->getName());
         $this->rpcQueue = new \ArrayObject();
-        $this->rpcRequestsConnections = new \ArrayObject();
+
         $this->rpc = new RPC(RPC::TYPE_REQUEST, $loop, $this, $config->get("name"), $this->getConfiguration()->toArray());
 
         $this->connectionStateCallbacks = new \SplObjectStorage();
@@ -337,10 +333,6 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                         'user' => $identity,
                         'requestId' => $requestId
                     ];
-                    $this->rpcRequestsConnections[$requestId][] = [
-                        'user' => $identity,
-                        'connection' => $from
-                    ];
                     $this->sendRequest($requestId, "$service/$action", $params);
                     return;
                 default:
@@ -454,28 +446,24 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     {
         $res = [];
 
-        if(isset($this->rpcRequestsConnections[$id])) {
-            $res = $this->rpcRequestsConnections[$id];
+        foreach ($this->rpcQueue as $connectionId =>  $requestData) {
+            foreach ($requestData as $data) {
+                if(isset($data['requestId']) && $data['requestId'] == $id){
+                    $connection = null;
+                    foreach ($this->clients as $conn) {
+                        if($conn->resourceId == $connectionId){
+                            $connection = $conn;
+                            break;
+                        }
+                    }
+                    $res[] = [
+                        'connection' => $connection,
+                        'user' => $data['user']
+                    ];
+                    break;
+                }
+            }
         }
-
-//        foreach ($this->rpcQueue as $connectionId =>  $requestData) {
-//            foreach ($requestData as $data) {
-//                if(isset($data['requestId']) && $data['requestId'] == $id){
-//                    $connection = null;
-//                    foreach ($this->clients as $conn) {
-//                        if($conn->resourceId == $connectionId){
-//                            $connection = $conn;
-//                            break;
-//                        }
-//                    }
-//                    $res[] = [
-//                        'connection' => $connection,
-//                        'user' => $data['user']
-//                    ];
-//                    break;
-//                }
-//            }
-//        }
         return $res;
     }
 
@@ -585,9 +573,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                         unset($this->rpcQueue[$conn->resourceId][$index]);
                     }
                 }
-                if(isset($this->rpcRequestsConnections[$resp->getRequestId()])){
-                    unset($this->rpcRequestsConnections[$resp->getRequestId()]);
-                }
+
             }else{
                 // there is no connection available for such response, so we need to wait for new connection from
                 // particular user for sending response to him
