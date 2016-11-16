@@ -339,7 +339,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     ];
                     $this->rpcRequestsConnections[$requestId][] = [
                         'user' => $identity,
-                        'connection' => $from->resourceId
+                        'connection' => $from
                     ];
                     $this->sendRequest($requestId, "$service/$action", $params);
                     return;
