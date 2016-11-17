@@ -85,7 +85,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
 
     private $waitingEventNotifications = [];
 
-    private $waitingRequestsLifetime = 20;
+    private $waitingRequestsLifetime = 60;
 
     /**
      * @var null|\ArrayObject
