@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
 use Utils\ConsoleTextColorizator;
 
-class LogMonitorCommand
+class LogsMonitorCommand
 {
     protected function configure()
     {
