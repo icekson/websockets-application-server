@@ -177,8 +177,7 @@ class Application implements \SplObserver, ConfigAwareInterface
         $this->logger->debug("Stop application");
         $loop = $this->loop;
         ProcessStarter::getInstance($loop);
-        $services = $this->getConfiguration()->getServicesConfig();
-        $phpCmd = $services[0]->get('php_path', 'php');
+        $phpCmd = $this->getConfiguration()->get('php_path', 'php');
         ProcessStarter::getInstance()->runNewProcess(sprintf("kill -9 `ps -ef | grep '%s scripts/runner.php app:service' | grep -v grep | awk '{print $2}'`", $phpCmd));
         $this->isStoped = true;
     }
