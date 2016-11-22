@@ -178,9 +178,9 @@ class Application implements \SplObserver, ConfigAwareInterface
         $loop = $this->loop;
         ProcessStarter::getInstance($loop);
         $phpCmd = $this->getConfiguration()->get('php_path', 'php');
-        $proc = new Process(sprintf("kill -9 `ps -ef | grep '%s scripts/runner.php app-server:start' | grep -v grep | awk '{print $2}'`", $phpCmd));
+        $proc = new Process(sprintf("kill -15 `ps -ef | grep '%s scripts/runner.php app-server:start' | grep -v grep | awk '{print $2}'`", $phpCmd));
         $proc->run();
-        $proc = new Process(sprintf("kill -9 `ps -ef | grep '%s scripts/runner.php app:service' | grep -v grep | awk '{print $2}'`", $phpCmd));
+        $proc = new Process(sprintf("kill -15 `ps -ef | grep '%s scripts/runner.php app:service' | grep -v grep | awk '{print $2}'`", $phpCmd));
         $proc->run();
         $this->isStoped = true;
     }
