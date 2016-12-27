@@ -69,7 +69,7 @@ class DelayedQueue implements DelayedQueueInterface
 
     }
 
-    private function initConnection($delay)
+    private function initConnection($delay, $routingKey)
     {
         if (!$this->connection->isConnected()) {
             $this->connection->reconnect();
@@ -83,7 +83,7 @@ class DelayedQueue implements DelayedQueueInterface
         $this->channel->queue_declare($this->queueName . $delay, false, true, false, false, false, new AMQPTable(array(
             "x-message-ttl" => $delay * 1000,
             'x-dead-letter-exchange' => $this->targetExchangeName,
-            'x-dead-letter-routing-key' => JobInterface::JOB_MATCH
+            'x-dead-letter-routing-key' => $routingKey
         )));
         $this->channel->queue_bind($this->queueName . $delay, $this->exchangeName, "delayed-task-" . $delay);
 
@@ -118,7 +118,7 @@ class DelayedQueue implements DelayedQueueInterface
             throw new \InvalidArgumentException("Invalid delay is given: $delay");
         }
 
-        $this->initConnection($delay);
+        $this->initConnection($delay, $routingKey);
         $params = new ParamsBag($params);
         $body = json_encode((object)['task' => $jobClassName, 'params' => $params->toArray()]);
         $msg = new AMQPMessage($body, ['content_type' => 'application/json', 'delivery_mode' => 2]);
