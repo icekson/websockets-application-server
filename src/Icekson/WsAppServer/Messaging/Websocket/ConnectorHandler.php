@@ -17,6 +17,7 @@ use Api\Service\Util\Properties;
 use Icekson\Utils\Logger;
 use Icekson\Config\ConfigAwareInterface;
 use Icekson\Config\ConfigureInterface;
+use Icekson\Utils\ParamsBag;
 use Icekson\WsAppServer\LoadBalancer\Balancer;
 use Icekson\WsAppServer\Messaging\Amqp\PubSub as AMQPPubSub;
 
@@ -85,13 +86,17 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
 
     private $waitingEventNotifications = [];
 
-    private $waitingRequestsLifetime = 60;
+    private $waitingRequestsLifetime = 20;
 
     /**
      * @var null|\ArrayObject
      */
     private $rpcQueue = null;
 
+    /**
+     * @var null|\ArrayObject
+     */
+    private $rpcRequestsConnections = null;
 
     /**
      * @var null|LoopInterface
@@ -124,7 +129,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
         $this->loop = $loop;
         $this->pubSub = new AMQPPubSub($config->toArray(), $this->getName());
         $this->rpcQueue = new \ArrayObject();
-
+        $this->rpcRequestsConnections = new \ArrayObject();
         $this->rpc = new RPC(RPC::TYPE_REQUEST, $loop, $this, $config->get("name"), $this->getConfiguration()->toArray());
 
         $this->connectionStateCallbacks = new \SplObjectStorage();
@@ -325,6 +330,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     break;
 
                 case 'rpc' :
+                    $this->pubSub->publish("appliaction.rpc.begin", get_class($this), new ParamsBag(["requestId" => $requestId, "timestamp" => microtime()]));
                     $params = $this->request->params()->get('params', array());
                     $params['token'] = $this->request->params()->get('token');
                     $this->logger()->info("RPC: $service/$action");
@@ -332,6 +338,10 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                     $this->rpcQueue[$from->resourceId][] = [
                         'user' => $identity,
                         'requestId' => $requestId
+                    ];
+                    $this->rpcRequestsConnections[$requestId][] = [
+                        'user' => $identity,
+                        'connection' => $from
                     ];
                     $this->sendRequest($requestId, "$service/$action", $params);
                     return;
@@ -446,24 +456,28 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
     {
         $res = [];
 
-        foreach ($this->rpcQueue as $connectionId =>  $requestData) {
-            foreach ($requestData as $data) {
-                if(isset($data['requestId']) && $data['requestId'] == $id){
-                    $connection = null;
-                    foreach ($this->clients as $conn) {
-                        if($conn->resourceId == $connectionId){
-                            $connection = $conn;
-                            break;
-                        }
-                    }
-                    $res[] = [
-                        'connection' => $connection,
-                        'user' => $data['user']
-                    ];
-                    break;
-                }
-            }
+        if(isset($this->rpcRequestsConnections[$id])) {
+            $res = $this->rpcRequestsConnections[$id];
         }
+
+//        foreach ($this->rpcQueue as $connectionId =>  $requestData) {
+//            foreach ($requestData as $data) {
+//                if(isset($data['requestId']) && $data['requestId'] == $id){
+//                    $connection = null;
+//                    foreach ($this->clients as $conn) {
+//                        if($conn->resourceId == $connectionId){
+//                            $connection = $conn;
+//                            break;
+//                        }
+//                    }
+//                    $res[] = [
+//                        'connection' => $connection,
+//                        'user' => $data['user']
+//                    ];
+//                    break;
+//                }
+//            }
+//        }
         return $res;
     }
 
@@ -566,6 +580,7 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
             $user = $data['user'];
             if($conn !== null) {
                 $conn->send($resp->serializeToClientFormat());
+                $this->pubSub->publish("appliaction.rpc.end", get_class($this), new ParamsBag(["requestId" => $resp->getRequestId(), "timestamp" => microtime()]));
                 $this->logger()->debug("on rpc response: send resp to client: " . $conn->resourceId);
                 if (isset($this->rpcQueue[$conn->resourceId])) {
                     $index = array_search($resp->getRequestId(), $this->rpcQueue[$conn->resourceId]);
@@ -573,7 +588,9 @@ class ConnectorHandler implements MessageComponentInterface, ConfigAwareInterfac
                         unset($this->rpcQueue[$conn->resourceId][$index]);
                     }
                 }
-
+                if(isset($this->rpcRequestsConnections[$resp->getRequestId()])){
+                    unset($this->rpcRequestsConnections[$resp->getRequestId()]);
+                }
             }else{
                 // there is no connection available for such response, so we need to wait for new connection from
                 // particular user for sending response to him
