@@ -74,22 +74,7 @@ class Application implements \SplObserver, ConfigAwareInterface
     {
         $this->logger->info("Start WsAppServer");
 
-        $servicesConfig = $this->config->getServicesConfig();
-//        var_export($servicesConfig);exit;
-        $loop = $this->loop;
-        $this->loop = $loop;
-        ProcessStarter::getInstance($loop);
-        Balancer::getInstance($this->getConfiguration())->reset();
-
-        $serviceConfigs = $this->parseServicesConfig($servicesConfig);
-
-        /** @var ServiceInterface $service */
-        foreach ($serviceConfigs as $serviceConf) {
-            $service = $this->initService($serviceConf);
-            $service->startAsProcess();
-            $this->services[$service->getPid()] = $service;
-
-        }
+        $loop = $this->startProcesses();
         $loop->run();
     }
 
@@ -231,7 +216,7 @@ class Application implements \SplObserver, ConfigAwareInterface
         return $this->loop;
     }
 
-    private function parseServicesConfig($servicesConfig)
+    public function parseServicesConfig($servicesConfig)
     {
         $amqpConf = $this->getConfiguration()->get('amqp', []);
         $services = [];
@@ -287,6 +272,30 @@ class Application implements \SplObserver, ConfigAwareInterface
         }
 
         return $services;
+    }
+
+    /**
+     * @return null|\React\EventLoop\ExtEventLoop
+     */
+    public function startProcesses()
+    {
+        $servicesConfig = $this->config->getServicesConfig();
+        $loop = $this->loop;
+        $this->loop = $loop;
+        ProcessStarter::getInstance($loop);
+        Balancer::getInstance($this->getConfiguration())->reset();
+
+        $serviceConfigs = $this->parseServicesConfig($servicesConfig);
+
+        /** @var ServiceInterface $service */
+        foreach ($serviceConfigs as $serviceConf) {
+            $service = $this->initService($serviceConf);
+            $service->startAsProcess();
+            $this->services[$service->getPid()] = $service;
+
+        }
+
+        return $loop;
     }
 
 }
