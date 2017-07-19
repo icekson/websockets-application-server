@@ -163,8 +163,17 @@ class Application implements \SplObserver, ConfigAwareInterface
         $loop = $this->loop;
         ProcessStarter::getInstance($loop);
         $services = $this->getConfiguration()->getServicesConfig();
-        $phpCmd = $services[0]->get('php_path', 'php');
-        ProcessStarter::getInstance()->runNewProcess(sprintf("kill -9 `ps -ef | grep '%s scripts/runner.php app:service' | grep -v grep | awk '{print $2}'`", $phpCmd));
+        $phpPaths = array();
+
+        foreach ($services as $service) {
+            if(isset($service['php_path']) && !in_array($service['php_path'], $phpPaths)) {
+                $cmd = sprintf("kill -9 `ps -ef | grep '%s scripts/runner.php app:service' | grep -v grep | awk '{print $2}'`", $service['php_path']);
+                $process = new Process($cmd);
+                $process->start();
+                $phpPaths[] = $service['php_path'];
+            }
+        }
+
         $this->isStoped = true;
     }
 
